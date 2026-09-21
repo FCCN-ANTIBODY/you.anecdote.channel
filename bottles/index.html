@@ -75,6 +75,7 @@ async function openBundle(bytes, sealedFlag) {
     const o = objects.get(f.oid); if (!o) continue;
     tree[f.path] = td.decode(o.content);
     const i = state.bottle.files.findIndex((x) => x.path === f.path);
+    if (f.path.startsWith("_data/")) continue;                       // plumbing the README reads, not a place to go
     const meta = { path: f.path, bytes: o.content.length, sealed: !!sealedFlag };
     if (i >= 0) state.bottle.files[i] = meta; else state.bottle.files.push(meta);
   }
