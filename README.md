@@ -34,17 +34,38 @@ visit and stored nowhere. That is `git-enough/held-token.mjs`'s crown with a ret
     channels.json    the index of allowed channels. Empty, truthfully.
     probe/prf.html   the one experiment that gates everything: does prf answer on this phone?
     wrangler.jsonc   the Pages project. No build; the repository is the site.
+    bottle/          gif.mjs (the stored rendering's codec), bundle.mjs (the v2 header), bottle.mjs
+                     (bytes -> GIF of QR frames -> bytes, over the mounted composer). Tests beside them.
+    bottles/         the published control bottle: control.bundle, control.gif, control.json, and the
+                     reader page that opens it in the tab with the camera off. GENERATED AND COMMITTED.
+    bin/control      (re)make refs/heads/control: one orphan commit, force-pushed, the payload
+    bin/publish      bundle that branch, sign it, cut it into the GIF, read it back before saying done
+    bin/test         the suites in bottle/
     mounts.txt       which directories of each submodule are the site
     bin/mount        apply that: a sparse checkout, re-applied by a verb
     bin/deploy       upload it from the workstation. Refuses a fat mount.
     anecdote.channel the tools shelf and the press — eight entries of the apex, ~2.8 MB of its 50
     _redirects       two rewrites so the press skins find the apex's assets under the mount
 
+## The bottle, as built
+
+`bin/control init` writes an orphan commit; `bin/publish` runs `git bundle create - refs/heads/control`,
+wraps the bytes in `transfer.mjs`'s signed envelope, cuts them with `carrier.mjs` into block frames
+(blocks, not droplets: a file loses nothing, and a lossless block cut is exactly its floor), renders each
+frame with `qr-enough` at one QR version for all, and writes them as a two-colour, one-module-per-pixel,
+delay-0 GIF — the *stored* rendering `bottles.anecdote.channel` describes. Then it reads that GIF back
+with the page's own reader and refuses to finish unless the bytes match. 723 bytes of bundle became a
+5.2 KB GIF of six 73-px frames on 2026-09-21.
+
+The signer is a device-minted Ed25519 key outside the repository. It says *this station bottled these
+bytes*; it is not the operator's passkey and is not the workload credential.
+
 ## What is not
 
-- The bundle header in `git-enough` (a v2 bundle is a four-line header over `packRepo`'s output).
-- The QR gif of a control branch's HEAD, and the still that comes back.
-- Per-recipient wraps (HPKE to the prf-derived key; encrypt once, *then* fountain-code).
+- The still that comes back: a recipient's one-frame bundle, scanned at the station.
+- Workload authentication: a credential derived from the passkey per channel (`prf`, salt = the
+  channel), distinct from the master identity — and the per-recipient wraps that use it (HPKE to the
+  derived key; encrypt once, *then* cut). `OPEN.md` §7.
 
 ## Revocation is an empty branch
 

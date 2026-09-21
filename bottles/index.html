@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en">
+<!-- bottles/ — read the control bottle with the camera off.
+     A stored bottle is a GIF of QR frames, one module per pixel. Because you already hold the file,
+     no camera is involved: the frames are read straight out of the pixels, fed to the same carrier
+     session a phone would use, verified, and the git bundle inside is opened by git-enough in this tab.
+     Transferring the GIF was transferring the bytes; this page is where that is checked. -->
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>you — bottles</title>
+<style>
+  :root { color-scheme: light dark; }
+  body { margin: 0; padding: 1.2rem 1rem 3rem; font: 15px/1.55 system-ui, sans-serif; max-width: 44rem; margin-inline: auto; }
+  h1 { font-size: 1.6rem; margin: .2rem 0 .6rem; } h2 { font-size: 1.1rem; margin-top: 1.6rem; }
+  dl { display: grid; grid-template-columns: max-content 1fr; gap: .2rem 1rem; } dt { opacity: .65; }
+  code, pre { font-family: ui-monospace, Menlo, monospace; font-size: .9em; } pre { background: rgba(127,127,127,.12); padding: .7rem; overflow-x: auto; white-space: pre-wrap; }
+  .ok { color: #1a7f37; } .bad { color: #b42318; } .muted { opacity: .7; }
+  img.bottle { image-rendering: pixelated; width: 292px; height: auto; border: 1px solid rgba(127,127,127,.4); }
+</style>
+<body>
+<h1>bottles</h1>
+<p class="muted">camera: <b>off</b>. What follows is read out of the file's pixels, not a lens.</p>
+<div id="out"><p class="muted">reading control.json…</p></div>
+
+<script type="module">
+import { unbottle } from "../bottle/bottle.mjs";
+import { parseBundle } from "../bottle/bundle.mjs";
+import { readPack } from "../anecdote.channel/git-enough/unpack.mjs";
+import { parseCommit, filesAt } from "../anecdote.channel/git-enough/read.mjs";
+import { defaultHash } from "../anecdote.channel/composer/anecdote.mjs";
+
+const out = document.getElementById("out");
+const esc = (s) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;");
+const td = new TextDecoder();
+const sections = [];
+const say = () => { out.innerHTML = sections.join("\n"); };
+const add = (h) => { sections.push(h); say(); };
+
+try {
+  const m = await (await fetch("control.json", { cache: "no-store" })).json();
+  add(`<h2>published</h2><dl>
+    <dt>ref</dt><dd><code>${esc(m.ref)}</code> at <code>${esc(m.tip.slice(0, 7))}</code></dd>
+    <dt>bundle</dt><dd><a href="${esc(m.bundle.file)}">${esc(m.bundle.file)}</a> · ${m.bundle.bytes} bytes · <code>${esc(m.bundle.sha256.slice(0, 23))}…</code></dd>
+    <dt>bottle</dt><dd><a href="${esc(m.gif.file)}">${esc(m.gif.file)}</a> · ${m.gif.bytes} bytes · ${m.gif.frames} frames of v${m.gif.version} (${m.gif.size}px, ${esc(m.gif.ecLevel)})</dd>
+    <dt>signed by</dt><dd><code>${esc(m.transfer.by)}</code></dd>
+    <dt>created</dt><dd>${esc(m.created)}</dd></dl>
+    <p><img class="bottle" src="${esc(m.gif.file)}" alt="the stored bottle, one module per pixel"> <span class="muted">← that is the whole payload, playing.</span></p>`);
+
+  const gif = new Uint8Array(await (await fetch(m.gif.file, { cache: "no-store" })).arrayBuffer());
+  const u = await unbottle(gif);
+  add(`<h2>read back</h2><dl>
+    <dt>frames</dt><dd>${u.decoded} of ${u.frames} decoded</dd>
+    <dt>transfer</dt><dd>${u.ok ? '<span class="ok">verified</span>' : '<span class="bad">NOT verified</span>'} ${esc(u.errors.join("; "))}</dd>
+    <dt>by</dt><dd><code>${esc(u.by || "?")}</code> ${u.by === m.transfer.by ? '<span class="ok">— as published</span>' : '<span class="bad">— differs from the manifest</span>'}</dd>
+    <dt>kind</dt><dd><code>${esc(u.kind || "?")}</code></dd></dl>`);
+  if (!u.ok) throw new Error("the bottle did not verify");
+
+  const sha = await defaultHash(u.bytes);
+  add(`<dl><dt>bytes</dt><dd>${u.bytes.length} · <code>${esc(sha.slice(0, 23))}…</code> ${sha === m.bundle.sha256 ? '<span class="ok">— the GIF is the bytes</span>' : '<span class="bad">— does not match the published bundle</span>'}</dd></dl>`);
+
+  const bundle = parseBundle(u.bytes);
+  const objects = await readPack(bundle.pack);
+  const tipRef = bundle.refs[0];
+  const commit = objects.get(tipRef.oid);
+  const c = parseCommit(commit.content);
+  const files = filesAt(objects, tipRef.oid);
+  add(`<h2>inside</h2><dl>
+    <dt>refs</dt><dd>${bundle.refs.map((r) => `<code>${esc(r.ref)}</code> → <code>${esc(r.oid.slice(0, 7))}</code>`).join("<br>")}</dd>
+    <dt>prerequisites</dt><dd>${bundle.prerequisites.length ? esc(bundle.prerequisites.join(", ")) : '<span class="muted">none — this is the whole branch, nothing to fast-forward from</span>'}</dd>
+    <dt>objects</dt><dd>${objects.size} in the pack</dd>
+    <dt>commit</dt><dd><code>${esc(String(c.message).trim())}</code><br><span class="muted">${esc(c.author || "")}</span></dd>
+    <dt>files</dt><dd>${files.map((f) => `<code>${esc(f.path)}</code> <span class="muted">${(objects.get(f.oid)?.content?.length ?? "?")} bytes</span>`).join("<br>")}</dd></dl>`);
+  for (const f of files) {
+    const o = objects.get(f.oid); if (!o || o.content.length > 4096) continue;
+    add(`<h2><code>${esc(f.path)}</code></h2><pre>${esc(td.decode(o.content))}</pre>`);
+  }
+  add(`<p class="muted">That is a clone, in a tab, from a picture. No remote, no network after the fetch, and the camera never came on.</p>`);
+} catch (e) {
+  add(`<p class="bad">${esc(e && e.message || e)}</p>`);
+}
+</script>
+</body>
+</html>

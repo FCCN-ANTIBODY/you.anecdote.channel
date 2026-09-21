@@ -35,10 +35,11 @@ wanted on a control point is a question, not a bug.
 The press skins link `/assets/…` and `/icon.svg` absolutely; `_redirects` rewrites those two
 names into the mount. Nothing else is rewritten.
 
-## 4. The bundle header
+## 4. The bundle header — read here, written by git
 
-A v2 git bundle is `# v2 git bundle`, one ref line, a blank line, and a packfile. `git-enough/pack.mjs`
-already makes the packfile in the browser. The header belongs beside it in `anecdote.channel`, not here.
+`bottle/bundle.mjs` parses a v2 bundle so the tab can open one; `git bundle create` writes it on the
+station. The browser-side *writer* (a header over `git-enough/pack.mjs`'s output) is what the return
+trip needs and is not here yet — it belongs in `anecdote.channel` beside `pack.mjs`.
 
 ## 5. Who reads the still
 
@@ -46,8 +47,18 @@ The return trip is one QR. Something at the station has to scan it and `git fetc
 it decodes. Which camera, which verb, and whether the fetch lands on `control/<recipient>` or a
 branch the recipient never sees named — undecided.
 
-## 6. One control branch or one per recipient
+## 6. One control branch, today
 
-`you.yml` names `control`. The design also describes a branch we hold *for* each recipient that they
-experience only as "the clone." Whether that is `control/<moniker>` with the wrap alongside, or one
-`control` plus per-recipient wrap files, decides what a force-push revokes: everyone, or one.
+`bin/control` makes exactly one, `refs/heads/control`, as a single orphan commit; `bin/publish`
+bottles it whole (no prerequisites, so nothing to fast-forward from). One branch per recipient —
+`control/<moniker>`, so a force-push revokes one rather than everyone — is the shape the design
+describes and is not built. It is a loop over what exists rather than a new mechanism.
+
+## 7. Workload authentication — the next step
+
+The passkey at this origin is the master identity. A workload — a channel, a control branch — should
+be answered by a credential *derived* from it, not by it: D12 already names the mechanism (`prf`
+with the workload as the salt), and the reader key for a wrap is `HKDF(prf) → X25519`. What is
+unbuilt is the whole path: the enrollment still carrying the derived public half, the wrap file per
+recipient, the reader deriving on presence and opening the wrap, and `bin/publish` sealing to a list
+of recipients instead of signing in the clear. The bottle above is the payload that path gates.

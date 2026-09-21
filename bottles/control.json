@@ -1,0 +1,32 @@
+{
+  "schema": "you.bottle/v1",
+  "ref": "refs/heads/control",
+  "tip": "63e349f5adfed50bb814bcd3d12dab2ebd6f0fd6",
+  "kind": "git-bundle",
+  "bundle": {
+    "file": "control.bundle",
+    "bytes": 723,
+    "sha256": "sha256:878b79159ed1f843134d6476278e70e3128f54237c459db2d23539118768042b",
+    "refs": [
+      {
+        "oid": "63e349f5adfed50bb814bcd3d12dab2ebd6f0fd6",
+        "ref": "refs/heads/control"
+      }
+    ],
+    "prerequisites": []
+  },
+  "gif": {
+    "file": "control.gif",
+    "bytes": 5229,
+    "frames": 6,
+    "version": 14,
+    "size": 73,
+    "ecLevel": "L",
+    "blockSize": 256
+  },
+  "transfer": {
+    "id": "sha256:bc11229804691146ce573cb8c78c2ea506dcc09f26de91d5e19b73a813d462e8",
+    "by": "key:sha256:b73106c4192e8c30531a78eef78963e1cd5cfd518361726c9f00062bb50ca082"
+  },
+  "created": "2026-09-21T15:57:39.337Z"
+}

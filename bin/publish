@@ -1,0 +1,73 @@
+#!/usr/bin/env node
+// publish — the control branch, as a bottle: bottles/control.{bundle,gif,json}.
+//
+//     bin/publish              bundle refs/heads/control, sign it, cut it into a GIF, verify by reading it back
+//     bin/publish --ref <ref>  another branch
+//
+// THE IDENTITY PROPERTY, ENFORCED: after writing the GIF this reads it back with the same reader the page
+// uses (bottle/bottle.mjs unbottle) and refuses to finish unless the bytes that come out are the bundle
+// that went in. A bottle that only encodes is a picture; this one has been decoded before anyone sees it.
+//
+// THE SIGNER is a device-minted Ed25519 key at ~/.local/state/you/signer.pkcs8 (atlas's format), made on
+// first use and never written into this repository. It is not the operator's passkey and does not claim to
+// be: it says "this station bottled these bytes", which a reader verifies from anyone and TRUSTS locally.
+import { spawnSync } from "node:child_process";
+import { readFileSync, writeFileSync, existsSync, mkdirSync } from "node:fs";
+import { join, dirname } from "node:path";
+import { fileURLToPath } from "node:url";
+import { homedir } from "node:os";
+import { fingerprint } from "../anecdote.channel/composer/sign.mjs";
+import { defaultHash } from "../anecdote.channel/composer/anecdote.mjs";
+import { bottle, unbottle } from "../bottle/bottle.mjs";
+import { parseBundle } from "../bottle/bundle.mjs";
+
+const root = join(dirname(fileURLToPath(import.meta.url)), "..");
+const args = process.argv.slice(2);
+const ref = args.includes("--ref") ? args[args.indexOf("--ref") + 1] : "refs/heads/control";
+const name = ref.replace(/^refs\/heads\//, "").replace(/\//g, "-");
+const subtle = globalThis.crypto.subtle;
+const b64 = (u) => Buffer.from(u).toString("base64"), unb64 = (s) => new Uint8Array(Buffer.from(s, "base64"));
+
+async function signer(path) {
+  if (existsSync(path)) {
+    const privateKey = await subtle.importKey("pkcs8", unb64(readFileSync(path, "utf8").trim()), { name: "Ed25519" }, true, ["sign"]);
+    const jwk = await subtle.exportKey("jwk", privateKey);
+    const raw = unb64(jwk.x.replace(/-/g, "+").replace(/_/g, "/"));
+    return { privateKey, raw, fingerprint: await fingerprint(raw) };
+  }
+  const pair = await subtle.generateKey({ name: "Ed25519" }, true, ["sign", "verify"]);
+  mkdirSync(dirname(path), { recursive: true });
+  writeFileSync(path, b64(new Uint8Array(await subtle.exportKey("pkcs8", pair.privateKey))) + "\n", { mode: 0o600 });
+  const raw = new Uint8Array(await subtle.exportKey("raw", pair.publicKey));
+  console.log("  minted a signer at " + path);
+  return { privateKey: pair.privateKey, raw, fingerprint: await fingerprint(raw) };
+}
+
+const tip = spawnSync("git", ["rev-parse", "--verify", ref], { cwd: root, encoding: "utf8" });
+if (tip.status !== 0) { console.error(`publish: no ${ref}. bin/control init`); process.exit(1); }
+const b = spawnSync("git", ["bundle", "create", "-", ref], { cwd: root, maxBuffer: 1 << 28 });
+if (b.status !== 0) { console.error("publish: git bundle failed:\n" + b.stderr); process.exit(1); }
+const bundle = new Uint8Array(b.stdout);
+const parsed = parseBundle(bundle);
+
+const id = await signer(process.env.YOU_SIGNER || join(homedir(), ".local", "state", "you", "signer.pkcs8"));
+const made = await bottle(bundle, id, { kind: "git-bundle" });
+
+const back = await unbottle(made.gif);
+const same = back.ok && back.bytes.length === bundle.length && back.bytes.every((v, i) => v === bundle[i]);
+if (!same) { console.error("publish: the GIF did not read back as the bundle: " + back.errors.join("; ")); process.exit(1); }
+
+mkdirSync(join(root, "bottles"), { recursive: true });
+const manifest = {
+  schema: "you.bottle/v1", ref, tip: tip.stdout.trim(), kind: "git-bundle",
+  bundle: { file: `${name}.bundle`, bytes: bundle.length, sha256: await defaultHash(bundle), refs: parsed.refs, prerequisites: parsed.prerequisites },
+  gif: { file: `${name}.gif`, bytes: made.gif.length, frames: made.frames, version: made.version, size: made.size, ecLevel: made.ecLevel, blockSize: made.blockSize },
+  transfer: { id: made.id, by: id.fingerprint },
+  created: new Date().toISOString(),
+};
+writeFileSync(join(root, "bottles", `${name}.bundle`), bundle);
+writeFileSync(join(root, "bottles", `${name}.gif`), made.gif);
+writeFileSync(join(root, "bottles", `${name}.json`), JSON.stringify(manifest, null, 2) + "\n");
+console.log(`  ${ref} @ ${manifest.tip.slice(0, 7)}  ->  bottles/${name}.bundle (${bundle.length} B)`);
+console.log(`  bottled as ${made.frames} frames of v${made.version} (${made.size}px, ${made.ecLevel})  ->  bottles/${name}.gif (${made.gif.length} B)`);
+console.log(`  read back with the camera off: the bytes are the bytes. signed by ${id.fingerprint.slice(0, 27)}…`);

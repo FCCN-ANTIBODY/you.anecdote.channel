@@ -18,9 +18,15 @@ keeper, the you-namespace, and the RP ID ruling this address exists to satisfy.
 5. **Revocation is an empty branch.** Do not invent an expiry field, a token, or a deny-list. Removing
    the bytes is the mechanism, and an empty QR of any age is indistinguishable from any other.
 6. **No build.** The repository is the site. If a file must be generated, it is generated *and
-   committed* (`channels.json`), never produced at deploy.
+   committed* (`channels.json`, everything in `bottles/`), never produced at deploy. `bin/publish` is
+   run by a person, and what it wrote is what gets committed.
 7. **The apex is mounted sparse, and `mounts.txt` is the record.** `git-enough/` and `composer/` are
    1.7 MB of a 50 MB repository. `bin/mount` applies the checkout; `bin/deploy` refuses one that is
    wider. Widening it is a line in `mounts.txt`, argued, not a `git submodule update` that happened.
-8. **GitHub is a next-stage proof.** Nothing in the two-phones case may require it, a public mirror,
+8. **The publisher's signer never enters the repository.** `~/.local/state/you/signer.pkcs8` is
+   device-minted and says only that this station bottled the bytes. It is not the passkey, and nothing
+   here may present it as the operator.
+9. **A bottle that was not read back was not published.** `bin/publish` decodes its own GIF before
+   it writes the manifest; do not add a path that skips that.
+10. **GitHub is a next-stage proof.** Nothing in the two-phones case may require it, a public mirror,
    or any third party. If a design needs one, it is not the primitive.
