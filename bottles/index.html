@@ -7,6 +7,7 @@
      Transferring the GIF was transferring the bytes; this page is where that is checked. -->
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="/icon.svg">
 <title>you — bottles</title>
 <style>
   :root { color-scheme: light dark; }
@@ -59,7 +60,7 @@ try {
   add(`<dl><dt>bytes</dt><dd>${u.bytes.length} · <code>${esc(sha.slice(0, 23))}…</code> ${sha === m.bundle.sha256 ? '<span class="ok">— the GIF is the bytes</span>' : '<span class="bad">— does not match the published bundle</span>'}</dd></dl>`);
 
   const bundle = parseBundle(u.bytes);
-  const objects = await readPack(bundle.pack);
+  const { objects } = await readPack(bundle.pack);   // { objects: Map oid -> {type, content}, count, version }
   const tipRef = bundle.refs[0];
   const commit = objects.get(tipRef.oid);
   const c = parseCommit(commit.content);
