@@ -1,0 +1,19 @@
+<!doctype html>
+<html lang="en">
+<!-- Without this file Cloudflare Pages answers every unknown path with index.html and a 200,
+     so a tool that was never mounted looks like the front door. A name that did not answer
+     has to say so. Committed, static, no build. -->
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>did not answer</title>
+<style>
+  :root { color-scheme: light dark; }
+  body { margin: 0; padding: 1.2rem 1rem; font: 15px/1.55 system-ui, sans-serif; max-width: 42rem; margin-inline: auto; }
+  code { font-family: ui-monospace, Menlo, monospace; }
+</style>
+<body>
+<h1>did not answer</h1>
+<p><code id="p"></code> is not on this site. Not "nothing here yet" — <em>not here</em>. What is here is listed at <a href="/">the root</a>; what of the apex is mounted is in <a href="/mounts.txt">mounts.txt</a>.</p>
+<script>document.getElementById("p").textContent = location.pathname;</script>
+</body>
+</html>
