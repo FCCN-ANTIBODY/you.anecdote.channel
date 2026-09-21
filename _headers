@@ -22,7 +22,24 @@
 #                       the edge answers that revalidation from its own hours-old copy.
 #
 # So a rule that says "cache for a day" makes this WORSE, not better: it is the edge half, and a
-# longer edge TTL is a longer lie. What this site wants is Edge TTL = Bypass, because Pages is
-# already a global CDN and a second cache in front of it buys nothing and costs correctness.
+# longer edge TTL is a longer lie.
+#
+# AND THE RIGHT SETTING IS NOT "BYPASS", IT IS "DEFER TO THIS FILE." Cache Rules offer three Edge TTL
+# choices, and their names are the whole answer (checked 2026-09-21):
+#
+#   "Use cache control-header if present, bypass cache if not"          <- what this site wants
+#   "Use cache-control header if present, use default Cloudflare ..."
+#   "Ignore cache-control header and use this TTL"                       <- what a day-long rule is
+#
+# The third one is the bug. The first one makes THIS FILE the cache policy, in git, reviewable, and
+# deployed with the site — which is the same reason nothing here is built. A blanket Bypass would
+# also work today and would throw away the ability to ever cache anything from here without a
+# dashboard visit.
+#
+# WORTH KNOWING: NO RULE IS NEEDED AT ALL. Cloudflare "does not cache HTML or JSON by default", and
+# "Origin Cache Control is enabled by default" on Free, Pro and Business — so the platform default is
+# already to respect what this file says. Its own fallback TTLs (120 minutes for a 200) apply only
+# "when no cache headers are present", and this file means they never are. A rule is worth keeping
+# only to be explicit, and to survive somebody switching Origin Cache Control off.
 /*
   Cache-Control: public, max-age=0, must-revalidate
