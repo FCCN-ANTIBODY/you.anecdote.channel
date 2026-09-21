@@ -1,0 +1,49 @@
+#!/bin/zsh
+# deploy — upload this repository to its Cloudflare Pages project, from here.
+#
+#     bin/deploy            deploy HEAD's working tree. Refuses a dirty tree.
+#     bin/deploy --dirty    deploy anyway, and say so in the deployment message.
+#
+# NO BUILD. The repository is the site (wrangler.jsonc: pages_build_output_dir "."),
+# so what is uploaded is what is committed, and the deployment message is the
+# commit it came from.
+#
+# DIES LOUDLY, ON PURPOSE. discoverywritten.com's deploy.yml records why: a laptop
+# OAuth token expired silently on 2026-08-27 and two days of merges built nothing.
+# So this asks `wrangler whoami` FIRST and stops if the login is gone, and after
+# the upload it fetches you.yml back from the instance's own name and compares it
+# byte-for-byte to the file here. A deploy that reports success and serves the old
+# bytes -- wrong project, name not attached, edge cache -- fails right here rather
+# than at the first enrollment.
+emulate -L zsh
+set -euo pipefail
+cd "${0:A:h:h}"
+
+W=(npx -y wrangler@4)
+
+if [[ -n "$(git status --porcelain)" && "${1:-}" != "--dirty" ]]; then
+  print -u2 "deploy: working tree is dirty. Commit, or --dirty to say so in the deployment."
+  git status --short >&2
+  exit 1
+fi
+
+$W whoami >/dev/null 2>&1 || { print -u2 "deploy: not logged in to Cloudflare (npx wrangler login). Nothing uploaded."; exit 78; }
+
+sha=$(git rev-parse --short HEAD)
+msg="$sha"
+[[ "${1:-}" == "--dirty" ]] && msg="$sha (dirty tree)"
+url=$(sed -nE 's/^url:[[:space:]]*"?([^"]+)"?/\1/p' you.yml | head -1)
+
+$W pages deploy . --commit-dirty=true --commit-message "$msg"
+
+print "\nverifying $url/you.yml against the file here…"
+for i in 1 2 3 4 5 6; do
+  if curl -fsS -H 'Cache-Control: no-cache' "$url/you.yml" 2>/dev/null | cmp -s - you.yml; then
+    print "  agrees. $url is serving $sha."
+    exit 0
+  fi
+  sleep 5
+done
+print -u2 "  DISAGREES after 30s: $url/you.yml is not the file that was just uploaded."
+print -u2 "  Wrong project, name not attached, or the edge is holding an old copy. Not done."
+exit 1

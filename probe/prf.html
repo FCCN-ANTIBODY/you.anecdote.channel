@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en">
+<!-- Does the WebAuthn `prf` extension answer on this device, at this origin?
+
+     This is the one experiment that gates the keywrapper: prf is what turns a passkey from a
+     yes/no gesture into 32 stable bytes only this authenticator can produce. It has to be asked
+     for at create() — a credential minted without it can never be upgraded — so the probe mints a
+     THROWAWAY credential, evaluates prf twice, and reports whether the bytes came back and
+     whether they matched. Nothing is stored; the credential id lives in a variable on this page.
+
+     It binds to location.hostname as the RP ID. Run it somewhere you do not care about first. -->
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>prf probe</title>
+<style>
+  :root { color-scheme: light dark; }
+  body { margin: 0; padding: 1.2rem 1rem 3rem; font: 15px/1.55 system-ui, sans-serif; max-width: 42rem; margin-inline: auto; }
+  button { font: inherit; padding: .5rem 1rem; margin: .3rem .4rem .3rem 0; cursor: pointer; }
+  pre { background: rgba(127,127,127,.12); padding: .8rem; overflow-x: auto; font-size: .85rem; white-space: pre-wrap; }
+  .ok { color: #1a7f37; } .bad { color: #b42318; } .muted { opacity: .7; }
+</style>
+<body>
+<h1>prf probe</h1>
+<p class="muted">RP ID <code id="rp"></code>. This mints a <b>throwaway</b> passkey on this device under that name. Delete it from your passkey manager afterwards; nothing here keeps it.</p>
+<p>
+  <button id="mint">1 · mint with prf requested</button>
+  <button id="eval" disabled>2 · evaluate twice</button>
+</p>
+<pre id="log"></pre>
+
+<script type="module">
+const $ = (id) => document.getElementById(id);
+const rpId = location.hostname; $("rp").textContent = rpId;
+const log = (s, cls) => { const l = $("log"); l.innerHTML += (cls ? `<span class="${cls}">` : "") + s + (cls ? "</span>" : "") + "\n"; };
+const hex = (b) => Array.from(new Uint8Array(b), (x) => x.toString(16).padStart(2, "0")).join("");
+const rnd = (n) => crypto.getRandomValues(new Uint8Array(n));
+const SALT = new TextEncoder().encode("you/probe/v1");
+let cred = null;
+
+log("secure context: " + (window.isSecureContext ? "yes" : "NO — stop here"), window.isSecureContext ? "ok" : "bad");
+log("PublicKeyCredential: " + (typeof PublicKeyCredential !== "undefined" ? "present" : "ABSENT"), typeof PublicKeyCredential !== "undefined" ? "ok" : "bad");
+if (typeof PublicKeyCredential !== "undefined" && PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable)
+  PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable().then((v) => log("platform authenticator: " + (v ? "available" : "not available"), v ? "ok" : "bad"));
+
+$("mint").onclick = async () => {
+  try {
+    const c = await navigator.credentials.create({ publicKey: {
+      rp: { id: rpId, name: "you (probe)" },
+      user: { id: rnd(16), name: "probe", displayName: "probe — delete me" },
+      challenge: rnd(32),
+      pubKeyCredParams: [{ type: "public-key", alg: -7 }, { type: "public-key", alg: -257 }],
+      authenticatorSelection: { residentKey: "required", userVerification: "required" },
+      extensions: { prf: {} },
+    }});
+    cred = c;
+    const ext = c.getClientExtensionResults();
+    log("created: " + hex(c.rawId).slice(0, 16) + "…");
+    log("prf at create: " + JSON.stringify(ext.prf ?? null), ext.prf && ext.prf.enabled ? "ok" : "bad");
+    if (!(ext.prf && ext.prf.enabled)) log("→ prf NOT enabled on this authenticator/browser. The keywrapper needs largeBlob or a hardware key here.", "bad");
+    $("eval").disabled = false;
+  } catch (e) { log("create failed: " + (e && e.message || e), "bad"); }
+};
+
+$("eval").onclick = async () => {
+  const once = async () => {
+    const a = await navigator.credentials.get({ publicKey: {
+      challenge: rnd(32), rpId, userVerification: "required",
+      allowCredentials: [{ type: "public-key", id: cred.rawId }],
+      extensions: { prf: { eval: { first: SALT } } },
+    }});
+    const r = a.getClientExtensionResults().prf;
+    return r && r.results && r.results.first ? hex(r.results.first) : null;
+  };
+  try {
+    const a = await once(); log("eval 1: " + (a ? a.slice(0, 16) + "…" : "no prf result"), a ? "ok" : "bad");
+    const b = await once(); log("eval 2: " + (b ? b.slice(0, 16) + "…" : "no prf result"), b ? "ok" : "bad");
+    if (a && b) log(a === b ? "DETERMINISTIC — same 32 bytes twice. prf works here." : "MISMATCH — bytes differ; this is not usable as a key.", a === b ? "ok" : "bad");
+  } catch (e) { log("get failed: " + (e && e.message || e), "bad"); }
+};
+</script>
+</body>
+</html>

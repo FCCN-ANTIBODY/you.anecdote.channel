@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en">
+<!-- you — the control point. Served as committed; nothing here is built.
+
+     This origin exists for one reason: it is the secure context a passkey can be meaningful in,
+     and therefore the RP ID every credential under it is bound to (anecdote.channel D12). The
+     page asks the browser what origin it is at and shows that beside what you.yml MEANT, so a
+     deploy to the wrong name is visible on arrival rather than discovered at the first
+     enrollment, when it is too late to change. -->
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>you</title>
+<style>
+  :root { color-scheme: light dark; }
+  body { margin: 0; padding: 1.2rem 1rem 3rem; font: 15px/1.55 system-ui, sans-serif; max-width: 42rem; margin-inline: auto; }
+  h1 { font-size: 1.6rem; margin: .2rem 0 1rem; }
+  dl { display: grid; grid-template-columns: max-content 1fr; gap: .25rem 1rem; }
+  dt { opacity: .65; }
+  code { font-family: ui-monospace, Menlo, monospace; font-size: .92em; }
+  .ok { color: #1a7f37; } .bad { color: #b42318; } .muted { opacity: .7; }
+  section { margin-top: 1.6rem; }
+  ul { padding-left: 1.2rem; }
+</style>
+<body>
+<h1>you</h1>
+<p class="muted">The control point. It publishes nothing but the excuse for an HTTPS context in which a passkey can mean something, and the index of channels it is willing to answer for.</p>
+
+<section>
+<dl>
+  <dt>at</dt><dd><code id="at">…</code></dd>
+  <dt>meant</dt><dd><code id="meant">…</code> <span id="agree"></span></dd>
+  <dt>secure context</dt><dd id="secure">…</dd>
+  <dt>RP ID</dt><dd><code id="rp">…</code> <span class="muted">— what any credential minted here is bound to, permanently</span></dd>
+</dl>
+</section>
+
+<section>
+<h2>Channels</h2>
+<ul id="channels"><li class="muted">reading channels.json…</li></ul>
+</section>
+
+<section>
+<h2>Probe</h2>
+<p><a href="probe/prf.html">Does <code>prf</code> answer on this device?</a> <span class="muted">— mints a throwaway passkey under this RP ID and evaluates it twice. Run it at the probe origin first, not here, if you have one.</span></p>
+</section>
+
+<section>
+<h2>Tools</h2>
+<p class="muted">None mounted yet. <code>git-enough</code> and the bottle player live in <code>anecdote.channel</code>; how they get here without the other 50 MB is OPEN.md §3.</p>
+</section>
+
+<script type="module">
+const $ = (id) => document.getElementById(id);
+$("at").textContent = location.origin;
+$("rp").textContent = location.hostname;
+const secure = window.isSecureContext;
+$("secure").innerHTML = secure
+  ? '<span class="ok">yes</span>'
+  : '<span class="bad">no</span> <span class="muted">— WebAuthn is unavailable here; nothing on this page can be trusted to gate anything.</span>';
+
+try {
+  const y = await (await fetch("you.yml", { cache: "no-store" })).text();
+  const m = /^url:\s*"?([^"\n]+)"?/m.exec(y);
+  const meant = m ? m[1].trim() : "(no url: in you.yml)";
+  $("meant").textContent = meant;
+  if (m) $("agree").innerHTML = meant === location.origin
+    ? '<span class="ok">— agrees</span>'
+    : '<span class="bad">— DISAGREES. A credential minted here binds to the name above, not the one you.yml meant.</span>';
+} catch (e) { $("meant").textContent = "(you.yml unreadable)"; }
+
+try {
+  const c = await (await fetch("channels.json", { cache: "no-store" })).json();
+  const ul = $("channels"); ul.innerHTML = "";
+  if (!c.channels || !c.channels.length) ul.innerHTML = '<li class="muted">none. That is the true answer today, not a loading state.</li>';
+  for (const ch of c.channels || []) { const li = document.createElement("li"); li.textContent = typeof ch === "string" ? ch : (ch.name || JSON.stringify(ch)); ul.appendChild(li); }
+} catch (e) { $("channels").innerHTML = '<li class="bad">channels.json did not answer.</li>'; }
+</script>
+</body>
+</html>

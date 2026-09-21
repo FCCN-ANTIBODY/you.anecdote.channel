@@ -1,0 +1,24 @@
+# Working in this repository
+
+Read `README.md`, then `OPEN.md`, then `anecdote.channel/docs/decisions.md` **D8, D9, D12** — the
+keeper, the you-namespace, and the RP ID ruling this address exists to satisfy.
+
+## The rules most likely to be broken here
+
+1. **`url:` in `you.yml` is decide-once.** It is the RP ID. A WebAuthn credential bakes it in at
+   creation and cannot be migrated; changing it means every holder enrols again. Do not change it,
+   and do not mint a credential anyone is meant to keep at any other name — `probe_origin` is for
+   probing, and a probe credential is a throwaway.
+2. **`prf` is requested at `create()` or never.** A credential minted without the extension cannot be
+   upgraded. Every enrolment path asks for it; a probe that reports it disabled is a stop, not a warning.
+3. **Nothing secret is ever committed.** Public halves only. The engine holds no key; the station that
+   mounts it holds no key; the reader key is re-derived from the gesture and is never at rest.
+4. **The control branch is force-pushed.** That is not history to protect. Its HEAD is the product and
+   the previous HEAD is meant to be gone.
+5. **Revocation is an empty branch.** Do not invent an expiry field, a token, or a deny-list. Removing
+   the bytes is the mechanism, and an empty QR of any age is indistinguishable from any other.
+6. **No build.** The repository is the site. If a file must be generated, it is generated *and
+   committed* (`channels.json`), never produced at deploy.
+7. **Do not mount `anecdote.channel` whole for one folder.** 50 MB for 352K of `git-enough`. `OPEN.md` §3.
+8. **GitHub is a next-stage proof.** Nothing in the two-phones case may require it, a public mirror,
+   or any third party. If a design needs one, it is not the primitive.
