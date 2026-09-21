@@ -19,6 +19,8 @@ keeper, the you-namespace, and the RP ID ruling this address exists to satisfy.
    the bytes is the mechanism, and an empty QR of any age is indistinguishable from any other.
 6. **No build.** The repository is the site. If a file must be generated, it is generated *and
    committed* (`channels.json`), never produced at deploy.
-7. **Do not mount `anecdote.channel` whole for one folder.** 50 MB for 352K of `git-enough`. `OPEN.md` §3.
+7. **The apex is mounted sparse, and `mounts.txt` is the record.** `git-enough/` and `composer/` are
+   1.7 MB of a 50 MB repository. `bin/mount` applies the checkout; `bin/deploy` refuses one that is
+   wider. Widening it is a line in `mounts.txt`, argued, not a `git submodule update` that happened.
 8. **GitHub is a next-stage proof.** Nothing in the two-phones case may require it, a public mirror,
    or any third party. If a design needs one, it is not the primitive.

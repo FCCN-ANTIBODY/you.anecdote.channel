@@ -1,0 +1,3 @@
+[submodule "anecdote.channel"]
+	path = anecdote.channel
+	url = https://github.com/FCCN-ANTIBODY/anecdote.channel.git

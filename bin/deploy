@@ -4,6 +4,9 @@
 #     bin/deploy            deploy HEAD's working tree. Refuses a dirty tree.
 #     bin/deploy --dirty    deploy anyway, and say so in the deployment message.
 #
+# REFUSES A FAT MOUNT. mounts.txt says which directories of each submodule are
+# the site; if the checkout is wider than that, this stops before uploading.
+#
 # NO BUILD. The repository is the site (wrangler.jsonc: pages_build_output_dir "."),
 # so what is uploaded is what is committed, and the deployment message is the
 # commit it came from.
@@ -26,6 +29,9 @@ if [[ -n "$(git status --porcelain)" && "${1:-}" != "--dirty" ]]; then
   git status --short >&2
   exit 1
 fi
+
+print "mounts:"
+bin/mount check || { print -u2 "deploy: a mount is not sparse. \`bin/mount\`, then try again. Nothing uploaded."; exit 1; }
 
 $W whoami >/dev/null 2>&1 || { print -u2 "deploy: not logged in to Cloudflare (npx wrangler login). Nothing uploaded."; exit 78; }
 

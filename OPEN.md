@@ -21,14 +21,16 @@ wildcard custom domain on the project (`anecdote.channel/docs/flooring.md` recor
 test and the assets-only-Worker fallback), and an edge certificate that covers the second label —
 Universal SSL stops at `*.discoverywritten.com`.
 
-## 3. The tools shelf
+## 3. The tools shelf is mounted; the press is not
 
-The user-facing page is meant to serve `git-enough`, the bottle player, and the pristine bottle for
-JS, for *their* use. All of them live in `anecdote.channel`, which is 50 MB on disk (`runtime/`
-24 MB, `models/` 23 MB) for the 352K that is `git-enough/`. Mounting it whole under a Pages upload
-is exactly the unwanted bytes the control branch is designed to avoid. Options, none chosen: a
-sparse mount, an export of the tool directories at a pin, or a build-free `git-enough` distribution
-that the apex publishes itself.
+`git-enough/` and `composer/` are served from a sparse mount of `anecdote.channel` at the pin in
+`.gitmodules` (`mounts.txt`, `bin/mount`). Nothing in either imports an absolute path, so they run
+under `/anecdote.channel/` unchanged — checked 2026-09-21.
+
+The broadcast target and the catch — the QR gif of a control branch and the still that comes back —
+are `press/` on the `the-press` branch (#244), unmerged. When it merges the pin rolls and `press`
+becomes a third word on the `mounts.txt` line. Pinning the branch before then is possible and is
+not done: an instance should not depend on a PR.
 
 ## 4. The bundle header
 

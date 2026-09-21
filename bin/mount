@@ -1,0 +1,39 @@
+#!/bin/zsh
+# mount — check out each submodule sparsely, to exactly what mounts.txt says.
+#
+#     bin/mount          apply mounts.txt. Idempotent.
+#     bin/mount check    say whether the working tree matches it; exit 1 if not.
+#
+# Git records a pin. It does not record which part of the pinned tree you meant
+# to have on disk, and a plain `git submodule update --init` checks out all of
+# it -- 50 MB of apex for 1.7 MB of tools, uploaded to the edge on the next
+# deploy. This is the local half of the mount, the way `bin/library origin --go`
+# on station-node is the local half of a remote: written to .git, re-applied by
+# a verb, never trusted to survive a reclone on its own.
+emulate -L zsh
+set -euo pipefail
+cd "${0:A:h:h}"
+
+rc=0
+grep -v '^\s*#' mounts.txt | grep -v '^\s*$' | while read -r sub dirs; do
+  if [[ ! -e "$sub/.git" ]]; then
+    [[ "${1:-}" == "check" ]] && { print "  $sub: not checked out"; rc=1; continue; }
+    git submodule update --init -- "$sub"
+  fi
+  want=$(print -l ${=dirs} | sed 's|^|/|; s|$|/|' | sort)
+  have=$(git -C "$sub" sparse-checkout list 2>/dev/null | sort || true)
+  if [[ "$want" == "$have" ]]; then
+    print "  $sub: sparse, ${(j:, :)${=dirs}}"
+    continue
+  fi
+  if [[ "${1:-}" == "check" ]]; then
+    print "  $sub: NOT the mount mounts.txt describes"
+    print "    have: ${${have//$'\n'/ }:-(everything)}"
+    print "    want: ${want//$'\n'/ }"
+    rc=1
+    continue
+  fi
+  git -C "$sub" sparse-checkout set --no-cone ${(f)want}
+  print "  $sub: mounted ${(j:, :)${=dirs}}"
+done
+exit $rc

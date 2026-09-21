@@ -34,14 +34,17 @@ visit and stored nowhere. That is `git-enough/held-token.mjs`'s crown with a ret
     channels.json    the index of allowed channels. Empty, truthfully.
     probe/prf.html   the one experiment that gates everything: does prf answer on this phone?
     wrangler.jsonc   the Pages project. No build; the repository is the site.
-    bin/deploy       upload it from the workstation.
+    mounts.txt       which directories of each submodule are the site
+    bin/mount        apply that: a sparse checkout, re-applied by a verb
+    bin/deploy       upload it from the workstation. Refuses a fat mount.
+    anecdote.channel the tools shelf — git-enough/ and composer/ of the apex, 1.7 MB of its 50
 
 ## What is not
 
 - The bundle header in `git-enough` (a v2 bundle is a four-line header over `packRepo`'s output).
 - The QR gif of a control branch's HEAD, and the still that comes back.
 - Per-recipient wraps (HPKE to the prf-derived key; encrypt once, *then* fountain-code).
-- The tools shelf. See `OPEN.md`.
+- The shelf at the pin where `press/` has merged (#244): the broadcast target and the catch.
 
 ## Revocation is an empty branch
 
