@@ -1,1 +1,3 @@
-no draft yet - replace this file: line 1 becomes the PR title, the rest the body
+bottles: keep _data/ out of the consumer's file list
+
+The README reads it (site.data.control drives the greeting; proven by a local build); a person has nowhere to go in it. Still in the bottle, still routable by hash, just not listed.
