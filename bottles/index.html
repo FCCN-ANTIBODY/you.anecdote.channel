@@ -12,7 +12,8 @@
 <style>
   :root { color-scheme: light dark; }
   body { margin: 0; padding: 1.2rem 1rem 3rem; font: 15px/1.55 system-ui, sans-serif; max-width: 44rem; margin-inline: auto; }
-  h1 { font-size: 1.6rem; margin: .2rem 0 .6rem; } h2 { font-size: 1.1rem; margin-top: 1.6rem; }
+  h1 { font-size: 1.6rem; margin: .2rem 0 .6rem; } h2 { font-size: 1.1rem; margin-top: 1.6rem; } h3 { font-size: 1rem; margin-top: 1rem; } h4 { font-size: .95rem; margin: .8rem 0 .2rem; }
+  button { font: inherit; padding: .4rem .8rem; margin: .2rem .3rem .2rem 0; cursor: pointer; } canvas { image-rendering: pixelated; margin-top: .5rem; max-width: 100%; }
   dl { display: grid; grid-template-columns: max-content 1fr; gap: .2rem 1rem; } dt { opacity: .65; }
   code, pre { font-family: ui-monospace, Menlo, monospace; font-size: .9em; } pre { background: rgba(127,127,127,.12); padding: .7rem; overflow-x: auto; white-space: pre-wrap; }
   .ok { color: #1a7f37; } .bad { color: #b42318; } .muted { opacity: .7; }
@@ -21,6 +22,22 @@
 <body>
 <h1>bottles</h1>
 <p class="muted">camera: <b>off</b>. What follows is read out of the file's pixels, not a lens.</p>
+<section id="key">
+<h2>your key</h2>
+<p class="muted">An age identity your passkey derives on every visit and never stores (D12: derived, not enrolled). Its public half, printed below, is the enrollment still: one QR, one glance, and a line in <a href="/recipients.txt">recipients.txt</a> is the arrangement.</p>
+<p>
+  <button id="enroll">enroll — mint a passkey with prf</button>
+  <button id="derive">derive — the gesture</button>
+  <button id="fallback">no prf here — mint an at-rest identity instead</button>
+</p>
+<div id="keyout" class="muted">no identity in memory.</div>
+<canvas id="still" hidden></canvas>
+</section>
+<section id="sealed">
+<h2>sealed bottle</h2>
+<div id="sealedout" class="muted">…</div>
+</section>
+<h2>clear bottle</h2>
 <div id="out"><p class="muted">reading control.json…</p></div>
 
 <script type="module">
@@ -29,6 +46,9 @@ import { parseBundle } from "../bottle/bundle.mjs";
 import { readPack } from "../anecdote.channel/git-enough/unpack.mjs";
 import { parseCommit, filesAt } from "../anecdote.channel/git-enough/read.mjs";
 import { defaultHash } from "../anecdote.channel/composer/anecdote.mjs";
+import { decrypt } from "../anecdote.channel/composer/age-seal.mjs";
+import { encodeQR } from "../anecdote.channel/composer/qr-encode.mjs";
+import { capabilities, enroll, derive, mintFallback } from "../bottle/you-key.mjs";
 
 const out = document.getElementById("out");
 const esc = (s) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;");
@@ -59,13 +79,20 @@ try {
   const sha = await defaultHash(u.bytes);
   add(`<dl><dt>bytes</dt><dd>${u.bytes.length} · <code>${esc(sha.slice(0, 23))}…</code> ${sha === m.bundle.sha256 ? '<span class="ok">— the GIF is the bytes</span>' : '<span class="bad">— does not match the published bundle</span>'}</dd></dl>`);
 
-  const bundle = parseBundle(u.bytes);
+  await inside(u.bytes, add);
+} catch (e) {
+  add(`<p class="bad">${esc(e && e.message || e)}</p>`);
+}
+
+// Open a bundle in the tab: refs, the tip commit, its files, and small text files in full.
+async function inside(bytes, add) {
+  const bundle = parseBundle(bytes);
   const { objects } = await readPack(bundle.pack);   // { objects: Map oid -> {type, content}, count, version }
   const tipRef = bundle.refs[0];
   const commit = objects.get(tipRef.oid);
   const c = parseCommit(commit.content);
   const files = filesAt(objects, tipRef.oid);
-  add(`<h2>inside</h2><dl>
+  add(`<h3>inside</h3><dl>
     <dt>refs</dt><dd>${bundle.refs.map((r) => `<code>${esc(r.ref)}</code> → <code>${esc(r.oid.slice(0, 7))}</code>`).join("<br>")}</dd>
     <dt>prerequisites</dt><dd>${bundle.prerequisites.length ? esc(bundle.prerequisites.join(", ")) : '<span class="muted">none — this is the whole branch, nothing to fast-forward from</span>'}</dd>
     <dt>objects</dt><dd>${objects.size} in the pack</dd>
@@ -73,11 +100,51 @@ try {
     <dt>files</dt><dd>${files.map((f) => `<code>${esc(f.path)}</code> <span class="muted">${(objects.get(f.oid)?.content?.length ?? "?")} bytes</span>`).join("<br>")}</dd></dl>`);
   for (const f of files) {
     const o = objects.get(f.oid); if (!o || o.content.length > 4096) continue;
-    add(`<h2><code>${esc(f.path)}</code></h2><pre>${esc(td.decode(o.content))}</pre>`);
+    add(`<h4><code>${esc(f.path)}</code></h4><pre>${esc(td.decode(o.content))}</pre>`);
   }
   add(`<p class="muted">That is a clone, in a tab, from a picture. No remote, no network after the fetch, and the camera never came on.</p>`);
-} catch (e) {
-  add(`<p class="bad">${esc(e && e.message || e)}</p>`);
+}
+
+// ---- your key ---------------------------------------------------------------------------------------
+let held = null;   // { identity, recipient, source } — memory only
+const keyout = document.getElementById("keyout"), still = document.getElementById("still");
+const cap = capabilities();
+if (!cap.secure || !cap.webauthn) keyout.innerHTML = '<span class="bad">no WebAuthn in this context; only the fallback is possible.</span>';
+else if (cap.credId) keyout.textContent = "a credential is remembered for this origin; derive to hold its identity.";
+function showKey(k) {
+  held = k;
+  keyout.innerHTML = `<dl><dt>recipient</dt><dd><code>${esc(k.recipient)}</code></dd><dt>source</dt><dd>${esc(k.source)}</dd><dt>identity</dt><dd class="muted">in memory only; not shown</dd></dl>
+    <p class="muted">Add a line to recipients.txt: <code>&lt;moniker&gt;  ${esc(k.recipient)}</code></p>`;
+  const q = encodeQR(k.recipient, { ecLevel: "M" }), m = 6, quiet = 4, px = (q.size + 2 * quiet) * m;
+  still.width = still.height = px; still.hidden = false;
+  const g = still.getContext("2d"); g.fillStyle = "#fff"; g.fillRect(0, 0, px, px); g.fillStyle = "#000";
+  for (let r = 0; r < q.size; r++) for (let c = 0; c < q.size; c++) if (q.modules[r][c]) g.fillRect((c + quiet) * m, (r + quiet) * m, m, m);
+  openSealed();
+}
+document.getElementById("enroll").onclick = async () => { try { const r = await enroll(); keyout.innerHTML = r.enabled ? "enrolled with prf. now derive." : '<span class="bad">the authenticator refused prf for this credential; it cannot derive. delete it and use the fallback, or another authenticator.</span>'; } catch (e) { keyout.innerHTML = `<span class="bad">${esc(e.message)}</span>`; } };
+document.getElementById("derive").onclick = async () => { try { showKey(await derive()); } catch (e) { keyout.innerHTML = `<span class="bad">${esc(e.message)}</span>`; } };
+document.getElementById("fallback").onclick = async () => { try { showKey(await mintFallback()); } catch (e) { keyout.innerHTML = `<span class="bad">${esc(e.message)}</span>`; } };
+
+// ---- the sealed bottle --------------------------------------------------------------------------------
+const sealedout = document.getElementById("sealedout");
+let sealedManifest = null;
+try { const r = await fetch("control.sealed.json", { cache: "no-store" }); if (r.ok) sealedManifest = await r.json(); } catch {}
+if (!sealedManifest) sealedout.innerHTML = "no sealed bottle is published: recipients.txt names nobody yet.";
+else sealedout.innerHTML = `sealed to ${sealedManifest.sealed.stanzas} recipient(s): <code>${esc(sealedManifest.sealed.recipients.join(", "))}</code> · <a href="${esc(sealedManifest.gif.file)}">${esc(sealedManifest.gif.file)}</a> ${sealedManifest.gif.bytes} bytes, ${sealedManifest.gif.frames} frames. <span class="muted">hold an identity above to open it.</span>`;
+async function openSealed() {
+  if (!sealedManifest || !held) return;
+  const parts = []; const say2 = () => { sealedout.innerHTML = parts.join("\n"); }; const add2 = (h) => { parts.push(h); say2(); };
+  try {
+    const gif = new Uint8Array(await (await fetch(sealedManifest.gif.file, { cache: "no-store" })).arrayBuffer());
+    const u = await unbottle(gif);
+    add2(`<dl><dt>frames</dt><dd>${u.decoded} of ${u.frames}</dd><dt>transfer</dt><dd>${u.ok ? '<span class="ok">verified</span>' : '<span class="bad">NOT verified</span>'} · <code>${esc(u.kind || "?")}</code> by <code>${esc((u.by || "?").slice(0, 27))}…</code></dd></dl>`);
+    if (!u.ok) throw new Error("the sealed bottle did not verify");
+    let opened;
+    try { opened = await decrypt(held.identity, u.bytes); }
+    catch (e) { add2(`<p class="bad">this identity (${esc(held.recipient.slice(0, 16))}…) has no stanza in it: not a recipient. ${esc(e.message)}</p>`); return; }
+    add2(`<p class="ok">opened with your ${esc(held.source)} identity: ${opened.length} bytes inside.</p>`);
+    await inside(opened, add2);
+  } catch (e) { add2(`<p class="bad">${esc(e && e.message || e)}</p>`); }
 }
 </script>
 </body>

@@ -20,6 +20,7 @@ import { fingerprint } from "../anecdote.channel/composer/sign.mjs";
 import { defaultHash } from "../anecdote.channel/composer/anecdote.mjs";
 import { bottle, unbottle } from "../bottle/bottle.mjs";
 import { parseBundle } from "../bottle/bundle.mjs";
+import { encrypt } from "../anecdote.channel/composer/age-seal.mjs";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const args = process.argv.slice(2);
@@ -71,3 +72,32 @@ writeFileSync(join(root, "bottles", `${name}.json`), JSON.stringify(manifest, nu
 console.log(`  ${ref} @ ${manifest.tip.slice(0, 7)}  ->  bottles/${name}.bundle (${bundle.length} B)`);
 console.log(`  bottled as ${made.frames} frames of v${made.version} (${made.size}px, ${made.ecLevel})  ->  bottles/${name}.gif (${made.gif.length} B)`);
 console.log(`  read back with the camera off: the bytes are the bytes. signed by ${id.fingerprint.slice(0, 27)}…`);
+
+// THE SEALED BOTTLE, when there is anyone to seal to. recipients.txt is the arrangement: one age
+// recipient per line, each the public half of an identity a passkey derives (bottle/you-key.mjs).
+// The bundle is sealed ONCE as an age v1 file with one stanza per recipient, then bottled exactly like
+// the clear one -- encrypt, then cut. Removing a line and re-running is revocation.
+const recipients = [];
+for (const line of readFileSync(join(root, "recipients.txt"), "utf8").split("\n")) {
+  const t = line.replace(/#.*/, "").trim(); if (!t) continue;
+  const [moniker, recipient] = t.split(/\s+/);
+  if (!/^age1[0-9a-z]+$/.test(recipient || "")) { console.error(`publish: recipients.txt: not an age recipient: ${line}`); process.exit(1); }
+  recipients.push({ moniker, recipient });
+}
+if (!recipients.length) { console.log("  sealed: no recipients in recipients.txt yet, so no sealed bottle."); }
+else {
+  const sealedBytes = await encrypt(recipients.map((r) => r.recipient), bundle);
+  const sealedMade = await bottle(sealedBytes, id, { kind: "age" });
+  const sealedBack = await unbottle(sealedMade.gif);
+  if (!(sealedBack.ok && sealedBack.bytes.length === sealedBytes.length && sealedBack.bytes.every((v, i) => v === sealedBytes[i])))
+    { console.error("publish: the sealed GIF did not read back as the age file"); process.exit(1); }
+  const sm = { ...manifest, kind: "age", sealed: { recipients: recipients.map((r) => r.moniker), stanzas: recipients.length, inside: "git-bundle", bytes: sealedBytes.length },
+               gif: { file: `${name}.sealed.gif`, bytes: sealedMade.gif.length, frames: sealedMade.frames, version: sealedMade.version, size: sealedMade.size, ecLevel: sealedMade.ecLevel, blockSize: sealedMade.blockSize },
+               transfer: { id: sealedMade.id, by: id.fingerprint } };
+  delete sm.bundle.file;
+  sm.age = { file: `${name}.age`, bytes: sealedBytes.length };
+  writeFileSync(join(root, "bottles", `${name}.age`), sealedBytes);
+  writeFileSync(join(root, "bottles", `${name}.sealed.gif`), sealedMade.gif);
+  writeFileSync(join(root, "bottles", `${name}.sealed.json`), JSON.stringify(sm, null, 2) + "\n");
+  console.log(`  sealed to ${recipients.length} recipient(s) (${recipients.map((r) => r.moniker).join(", ")}): ${sealedBytes.length} B age file  ->  bottles/${name}.sealed.gif (${sealedMade.gif.length} B, ${sealedMade.frames} frames), read back.`);
+}

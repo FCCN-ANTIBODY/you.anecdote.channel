@@ -38,6 +38,9 @@ visit and stored nowhere. That is `git-enough/held-token.mjs`'s crown with a ret
                      (bytes -> GIF of QR frames -> bytes, over the mounted composer). Tests beside them.
     bottles/         the published control bottle: control.bundle, control.gif, control.json, and the
                      reader page that opens it in the tab with the camera off. GENERATED AND COMMITTED.
+    recipients.txt   THE ARRANGEMENT: <moniker>  <age1…> per line; who may open a sealed bottle
+    bottle/you-key.mjs  the reader's age identity from the passkey (prf, salt = this origin), never stored;
+                     a labelled at-rest fallback where prf is absent
     bin/control      (re)make refs/heads/control: one orphan commit, force-pushed, the payload
     bin/publish      bundle that branch, sign it, cut it into the GIF, read it back before saying done
     bin/test         the suites in bottle/
@@ -61,12 +64,25 @@ with the page's own reader and refuses to finish unless the bytes match. 723 byt
 The signer is a device-minted Ed25519 key outside the repository. It says *this station bottled these
 bytes*; it is not the operator's passkey and is not the workload credential.
 
+## The sealed bottle, as built
+
+The passkey is the master identity; the workload credential is derived from it. `prf` evaluated at
+this origin's salt returns 32 bytes, which are an age X25519 scalar, so `encodeIdentity` makes an
+`AGE-SECRET-KEY` of them on every visit and nothing is ever at rest. Its public `age1…` half is the
+enrollment still. `recipients.txt` is where a person writes it down, and that line is the arrangement.
+`bin/publish` then seals the bundle **once** as a real age v1 file (`composer/age-seal.mjs`, one stanza
+per recipient), and bottles that exactly like the clear one — encrypt, then cut. The page opens it
+with the derived identity and shows the same clone. Removing a line and republishing is revocation;
+a stranger's identity is refused (`bottle/sealed.test.mjs`).
+
 ## What is not
 
-- The still that comes back: a recipient's one-frame bundle, scanned at the station.
-- Workload authentication: a credential derived from the passkey per channel (`prf`, salt = the
-  channel), distinct from the master identity — and the per-recipient wraps that use it (HPKE to the
-  derived key; encrypt once, *then* cut). `OPEN.md` §7.
+- The still that comes back *as a commit*: today the enrollment still carries only the recipient
+  string, read by a person into `recipients.txt`; a signed one-commit bundle scanned at the station is
+  the next form of it.
+- One control branch per recipient, so a force-push revokes one rather than everyone.
+- The per-channel salt: one identity per origin today; `prf(salt = channel)` per workload is a loop
+  over this, not a new mechanism.
 
 ## Revocation is an empty branch
 

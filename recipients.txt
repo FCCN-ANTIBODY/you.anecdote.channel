@@ -1,0 +1,9 @@
+# recipients.txt — the arrangement. Who may open a sealed bottle from this control point.
+#
+# One line per recipient: <moniker>  <age1… recipient>. The recipient is the PUBLIC half of an
+# identity the holder's passkey derives on every visit (bottle/you-key.mjs: prf, salt = this
+# origin) and never stores. It arrives as the enrollment still -- one QR, one glance, at first
+# contact -- and a line here is the whole record of the arrangement. Remove the line and re-run
+# bin/publish: the next bottle has no stanza for them, and the old one still opens only its own bytes.
+#
+# Nothing here is secret. Nothing here is the operator's passkey.

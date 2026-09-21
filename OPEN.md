@@ -54,11 +54,11 @@ bottles it whole (no prerequisites, so nothing to fast-forward from). One branch
 `control/<moniker>`, so a force-push revokes one rather than everyone — is the shape the design
 describes and is not built. It is a loop over what exists rather than a new mechanism.
 
-## 7. Workload authentication — the next step
+## 7. Workload authentication — the derived half is built; the return still is not
 
-The passkey at this origin is the master identity. A workload — a channel, a control branch — should
-be answered by a credential *derived* from it, not by it: D12 already names the mechanism (`prf`
-with the workload as the salt), and the reader key for a wrap is `HKDF(prf) → X25519`. What is
-unbuilt is the whole path: the enrollment still carrying the derived public half, the wrap file per
-recipient, the reader deriving on presence and opening the wrap, and `bin/publish` sealing to a list
-of recipients instead of signing in the clear. The bottle above is the payload that path gates.
+`bottle/you-key.mjs` derives an age identity from the passkey (`prf`, salt = this origin) and prints
+the recipient as a still; `recipients.txt` is the arrangement; `bin/publish` seals to it; the page
+opens it. What remains: whether `prf` answers on the operator's phone (§1 — the fallback is labelled
+and at rest, and strictly weaker); the enrollment still as a signed commit rather than a string a
+person copies; per-channel salts; and the station-side scan of the still. None of these changes the
+shape.

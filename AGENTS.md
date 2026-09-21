@@ -28,5 +28,7 @@ keeper, the you-namespace, and the RP ID ruling this address exists to satisfy.
    here may present it as the operator.
 9. **A bottle that was not read back was not published.** `bin/publish` decodes its own GIF before
    it writes the manifest; do not add a path that skips that.
-10. **GitHub is a next-stage proof.** Nothing in the two-phones case may require it, a public mirror,
+10. **`recipients.txt` is the arrangement, written by a person.** A line is a decision somebody made
+    at first contact. Nothing here may add one from a request, a form, or a message.
+11. **GitHub is a next-stage proof.** Nothing in the two-phones case may require it, a public mirror,
    or any third party. If a design needs one, it is not the primitive.
