@@ -37,9 +37,27 @@ asks — with `cf-cache-status: HIT` and `age: 4142`. The browser is revalidatin
 exactly as told, and **the edge answers that revalidation out of its own hours-old copy.**
 
 So the remaining staleness is entirely Edge TTL, and a rule reading "cache for a day" is pointed the
-wrong way — it is this half, and a longer edge TTL is a longer lie. This site wants **Edge TTL =
-Bypass**: Pages is already a global CDN, so a second cache in front of it buys nothing and costs
-correctness. Dashboard only; the token here cannot purge or set rules.
+wrong way — it is this half, and a longer edge TTL is a longer lie.
+
+**The setting is "defer to the origin", not "bypass".** Cache Rules name their three Edge TTL choices
+plainly, and the first is the one this site wants:
+
+| Edge TTL choice | effect here |
+| --- | --- |
+| *Use cache control-header if present, bypass cache if not* | **this one** — `_headers` becomes the policy |
+| *Use cache-control header if present, use default Cloudflare caching behavior if not* | same today; differs if `_headers` ever stops covering a path |
+| *Ignore cache-control header and use this TTL* | the bug — what a day-long rule is |
+
+A blanket Bypass works too and is worse: it throws away any future ability to cache from `_headers`
+without a dashboard visit. Keeping the policy in a committed file is the same argument as the rest of
+this repository having no build.
+
+**And strictly, no rule is needed.** Cloudflare "does not cache HTML or JSON by default" and "Origin
+Cache Control is enabled by default" on Free, Pro and Business, so the platform already respects this
+file; its own fallback TTLs (120 minutes for a 200) apply only "when no cache headers are present",
+which `_headers` guarantees never happens. A rule earns its keep only by being explicit, and by
+surviving somebody switching Origin Cache Control off. Dashboard only either way; the token here
+cannot purge or set rules.
 
 The page no longer depends on this being right — `control.json` is asked for with a fresh query
 every time and the artifacts it names carry the transfer id in their URL — but `bin/deploy` will keep

@@ -1,3 +1,5 @@
-docs: two cache knobs, and which one a "cache for a day" rule is
+docs: the cache setting is "defer to this file", not "bypass"
 
-The browser half is fixed (a Cache Rule now lets `_headers` max-age=0 through; the zone had been rewriting it to 300). The remaining staleness is Edge TTL, which only a Cache Rule sets and which a longer TTL makes worse. Corrects a claim in OPEN.md §2b and `_headers` that is no longer true.
+Cache Rules name three Edge TTL choices; the one this site wants is "Use cache control-header if present, bypass cache if not", which makes the committed `_headers` the cache policy. A blanket Bypass works and is worse — it discards any future ability to cache from a file in git. And strictly no rule is needed: Cloudflare does not cache HTML or JSON by default and Origin Cache Control is on by default, so the platform already respects the file; its fallback TTLs apply only when no cache headers are present.
+
+Corrects the "Edge TTL = Bypass" recommendation in both `_headers` and OPEN.md §2b, which was imprecise advice sitting in a merged file.
