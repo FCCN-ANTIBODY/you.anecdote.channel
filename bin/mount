@@ -20,9 +20,11 @@ grep -v '^\s*#' mounts.txt | grep -v '^\s*$' | while read -r sub dirs; do
     [[ "${1:-}" == "check" ]] && { print "  $sub: not checked out"; rc=1; continue; }
     git submodule update --init -- "$sub"
   fi
-  want=$(print -l ${=dirs} | sed 's|^|/|; s|$|/|' | sort)
+  # a dotted entry is a file pattern, the rest are directories
+  want=$(print -l ${=dirs} | sed -E 's|^|/|; /\./!s|$|/|' | sort)
   have=$(git -C "$sub" sparse-checkout list 2>/dev/null | sort || true)
   if [[ "$want" == "$have" ]]; then
+    [[ "${1:-}" == "check" ]] || git -C "$sub" submodule update --init -q 2>/dev/null || true
     print "  $sub: sparse, ${(j:, :)${=dirs}}"
     continue
   fi
@@ -34,6 +36,8 @@ grep -v '^\s*#' mounts.txt | grep -v '^\s*$' | while read -r sub dirs; do
     continue
   fi
   git -C "$sub" sparse-checkout set --no-cone ${(f)want}
+  # a submodule INSIDE the sparse tree (jekyll-enough) is a gitlink until hydrated
+  git -C "$sub" submodule update --init -q 2>/dev/null || true
   print "  $sub: mounted ${(j:, :)${=dirs}}"
 done
 exit $rc

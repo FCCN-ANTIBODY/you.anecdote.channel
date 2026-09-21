@@ -6,5 +6,12 @@
 # 1.7 MB of it, so the checkout is sparse and bin/mount applies it. Re-run after a
 # clone, after `git submodule update`, or whenever bin/deploy refuses.
 #
-# Format: <submodule path>  <directory>...   one line per mount.
-anecdote.channel  git-enough  composer
+# Format: <submodule path>  <entry>...   one line per mount. An entry with a dot in it is a
+# file; anything else is a directory. Measured 2026-09-21 by reading imports, not guessing:
+#   press      → composer git-enough jekyll-enough reducer      (press/*.mjs)
+#   composer   → git-enough reducer viewer
+#   reducer    → composer, and a DYNAMIC import of ../runtime/*.bundle.mjs -- the 24 MB ML
+#                runtime, reached only on the embedding path. Left out on purpose; if a page
+#                ever gets there it meets 404.html, which is the honest answer.
+#   assets, icon.svg  → the press skins link them by absolute path; _redirects maps those.
+anecdote.channel  git-enough  composer  press  jekyll-enough  reducer  viewer  assets  icon.svg

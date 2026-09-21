@@ -21,16 +21,19 @@ wildcard custom domain on the project (`anecdote.channel/docs/flooring.md` recor
 test and the assets-only-Worker fallback), and an edge certificate that covers the second label —
 Universal SSL stops at `*.discoverywritten.com`.
 
-## 3. The tools shelf is mounted; the press is not
+## 3. The tools shelf and the press are mounted; the runtime is not
 
-`git-enough/` and `composer/` are served from a sparse mount of `anecdote.channel` at the pin in
-`.gitmodules` (`mounts.txt`, `bin/mount`). Nothing in either imports an absolute path, so they run
-under `/anecdote.channel/` unchanged — checked 2026-09-21.
+`git-enough/`, `composer/`, `press/`, `jekyll-enough/`, `reducer/`, `viewer/`, `assets/` and
+`icon.svg` are served from a sparse mount of `anecdote.channel` at the pin in `.gitmodules`
+(`mounts.txt`, `bin/mount`), about 2.8 MB of its 50. #244 merged 2026-09-21 after a four-file
+conflict was resolved here, so the press is on `main` and pinned as such.
 
-The broadcast target and the catch — the QR gif of a control branch and the still that comes back —
-are `press/` on the `the-press` branch (#244), unmerged. When it merges the pin rolls and `press`
-becomes a third word on the `mounts.txt` line. Pinning the branch before then is possible and is
-not done: an instance should not depend on a PR.
+`runtime/` (24 MB) is deliberately absent. The only path into it is a dynamic import on the
+reducer's embedding path, so a page that reaches it meets `404.html`. Whether that path is ever
+wanted on a control point is a question, not a bug.
+
+The press skins link `/assets/…` and `/icon.svg` absolutely; `_redirects` rewrites those two
+names into the mount. Nothing else is rewritten.
 
 ## 4. The bundle header
 
