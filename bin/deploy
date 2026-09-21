@@ -42,14 +42,32 @@ url=$(sed -nE 's/^url:[[:space:]]*"?([^"]+)"?/\1/p' you.yml | head -1)
 
 $W pages deploy . --commit-dirty=true --commit-message "$msg"
 
-print "\nverifying $url/you.yml against the file here…"
-for i in 1 2 3 4 5 6; do
-  if curl -fsS -H 'Cache-Control: no-cache' "$url/you.yml" 2>/dev/null | cmp -s - you.yml; then
-    print "  agrees. $url is serving $sha."
-    exit 0
-  fi
-  sleep 5
+# VERIFY THE WAY A BROWSER LOADS IT. A module import is a CORS request carrying an Origin header,
+# and Cloudflare caches that variant separately from the one curl gets; measured 2026-09-21, a
+# changed module stayed stale at the edge for browsers only, after a deploy that reported success
+# and after a plain fetch agreed with the tree. So every file is fetched with the Origin header set,
+# and compared byte-for-byte with what is here. Any difference means the deploy is not done, and the
+# way out is either time or a purge in the dashboard -- the token here cannot purge.
+print "\nverifying every file at $url as a browser would fetch it…"
+stale=(); n=0
+for f in $(git ls-files --recurse-submodules | grep -v -E '^(\.gitmodules|\.gitignore|\.pr|mounts\.txt|_headers|_redirects|wrangler\.jsonc)$'); do
+  [[ -f "$f" ]] || continue
+  n=$((n+1))
+  # Pages serves x.html at x (308 from x.html); ask for the served name.
+  case "$f" in
+    index.html)      u="$url/";;
+    */index.html)    u="$url/${f%index.html}";;
+    *.html)          u="$url/${f%.html}";;
+    *)               u="$url/$f";;
+  esac
+  if ! curl -fsS -H "Origin: $url" "$u" 2>/dev/null | cmp -s - "$f"; then stale+=("$f"); fi
 done
-print -u2 "  DISAGREES after 30s: $url/you.yml is not the file that was just uploaded."
-print -u2 "  Wrong project, name not attached, or the edge is holding an old copy. Not done."
+if (( ${#stale} == 0 )); then
+  print "  all $n files agree. $url is serving $sha."
+  exit 0
+fi
+print -u2 "  ${#stale} of $n file(s) differ from the tree when fetched with an Origin header:"
+for f in $stale; do print -u2 "    $f"; done
+print -u2 "  The edge is holding an old copy for browsers. Not done: wait it out, or purge the zone's"
+print -u2 "  cache in the dashboard (Caching → Configuration → Purge Everything), then run this again."
 exit 1

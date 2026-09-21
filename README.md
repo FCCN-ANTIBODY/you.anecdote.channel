@@ -46,6 +46,7 @@ visit and stored nowhere. That is `git-enough/held-token.mjs`'s crown with a ret
     bin/deploy       upload it from the workstation. Refuses a fat mount.
     anecdote.channel the tools shelf and the press — eight entries of the apex, ~2.8 MB of its 50
     _redirects       two rewrites so the press skins find the apex's assets under the mount
+    _headers         nothing is kept at the edge; a deploy is what you get. It says why.
 
 ## The bottle, as built
 

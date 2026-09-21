@@ -1,0 +1,12 @@
+# Cloudflare Pages headers. Committed, no build.
+#
+# EVERYTHING REVALIDATES, NOTHING SITS AT THE EDGE. Measured 2026-09-21: a deploy that changed one
+# module reported success, curl fetched the new bytes, and every browser at the MCI edge kept getting
+# the OLD module for a further twelve minutes and counting -- because a module import is a CORS
+# request with an Origin header, Cloudflare keys that variant separately, and the deploy's purge did
+# not reach it. This site is a few hundred small files whose whole point is that what was deployed is
+# what you get, so the edge is told not to keep any of it and browsers are told to ask every time
+# (an ETag round-trip, 304 if unchanged). bin/deploy's post-check fetches the CORS variant of every
+# file and refuses to finish while any one of them differs from the tree.
+/*
+  Cache-Control: public, max-age=0, must-revalidate
