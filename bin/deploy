@@ -48,7 +48,7 @@ $W pages deploy . --commit-dirty=true --commit-message "$msg"
 # and after a plain fetch agreed with the tree. So every file is fetched with the Origin header set,
 # and compared byte-for-byte with what is here. Any difference means the deploy is not done, and the
 # way out is either time or a purge in the dashboard -- the token here cannot purge.
-print "\nverifying every file at $url as a browser would fetch it…"
+print "\nverifying every file at $url, both ways a browser fetches…"
 stale=(); n=0
 for f in $(git ls-files --recurse-submodules | grep -v -E '^(\.gitmodules|\.gitignore|\.pr|mounts\.txt|_headers|_redirects|wrangler\.jsonc)$'); do
   [[ -f "$f" ]] || continue
@@ -60,7 +60,9 @@ for f in $(git ls-files --recurse-submodules | grep -v -E '^(\.gitmodules|\.giti
     *.html)          u="$url/${f%.html}";;
     *)               u="$url/$f";;
   esac
-  if ! curl -fsS -H "Origin: $url" "$u" 2>/dev/null | cmp -s - "$f"; then stale+=("$f"); fi
+  # both variants the edge keeps: the one a module loader gets (Origin) and the one a fetch() gets
+  if ! curl -fsS -H "Origin: $url" "$u" 2>/dev/null | cmp -s - "$f"; then stale+=("$f (cors)"); fi
+  if ! curl -fsS "$u" 2>/dev/null | cmp -s - "$f"; then stale+=("$f (plain)"); fi
 done
 if (( ${#stale} == 0 )); then
   print "  all $n files agree. $url is serving $sha."

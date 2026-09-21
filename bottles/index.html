@@ -29,8 +29,8 @@
   details { max-width: 42rem; margin: 0 auto 3rem; padding: 0 1rem; opacity: .8; } details dl { display: grid; grid-template-columns: max-content 1fr; gap: .15rem .8rem; font-size: .9rem; } details dt { opacity: .65; }
 </style>
 <body>
-<header class="bar"><img id="logo" src="control.gif" alt="the bottle — tap to see it big"><div><b>you</b><br><span id="chip" class="chip">reading the bottle…</span></div></header>
-<div id="big" hidden><img src="control.gif" alt="the bottle, big"><p>that is the whole payload, playing. tap to send it back.</p></div>
+<header class="bar"><img id="logo" src="data:image/gif;base64,R0lGODlhAQABAAAAACw=" alt="the bottle — tap to see it big"><div><b>you</b><br><span id="chip" class="chip">reading the bottle…</span></div></header>
+<div id="big" hidden><img id="bigimg" src="data:image/gif;base64,R0lGODlhAQABAAAAACw=" alt="the bottle, big"><p>that is the whole payload, playing. tap to send it back.</p></div>
 <main id="page"><p class="muted">Reading the bottle out of its pixels…</p></main>
 <details id="how"><summary>how this got here</summary><div id="out" class="muted">…</div></details>
 
@@ -82,8 +82,9 @@ async function openBundle(bytes, sealedFlag) {
 }
 
 try {
-  manifest = await (await fetch("control.json", { cache: "no-store" })).json();
-  const u = await readBottle(manifest.gif.file);
+  manifest = await (await fetch("control.json?t=" + Date.now(), { cache: "no-store" })).json();   // the manifest: never a cached copy, whatever the edge thinks
+  $("logo").src = $("bigimg").src = manifest.gif.file + "?v=" + encodeURIComponent(manifest.transfer.id.slice(7, 23));
+  const u = await readBottle(manifest.gif.file + "?v=" + encodeURIComponent(manifest.transfer.id.slice(7, 23)));   // content-addressed: a new bottle is a new URL
   const sha = await defaultHash(u.bytes);
   const { b, tip, count, commit } = await openBundle(u.bytes, false);
   Object.assign(state.bottle, { ref: tip.ref, tip: tip.oid, tip_short: tip.oid.slice(0, 7), frames: u.frames, by: u.by, by_short: u.by.slice(0, 27) });
@@ -92,7 +93,7 @@ try {
     <dt>read back</dt><dd>${u.decoded} of ${u.frames} frames · <span class="ok">verified</span> · by <code>${esc(u.by)}</code> ${u.by === manifest.transfer.by ? '<span class="ok">as published</span>' : '<span class="bad">differs</span>'}</dd>
     <dt>bytes</dt><dd>${u.bytes.length} · <code>${esc(sha.slice(0, 23))}…</code> ${sha === manifest.bundle.sha256 ? '<span class="ok">the GIF is the bytes</span>' : '<span class="bad">mismatch</span>'} · <a href="${esc(manifest.bundle.file)}">${esc(manifest.bundle.file)}</a></dd>
     <dt>inside</dt><dd>${b.refs.map((r) => `<code>${esc(r.ref)}</code> → <code>${esc(r.oid.slice(0, 7))}</code>`).join(", ")} · ${count} objects · <code>${esc(String(commit.message).trim())}</code> · no prerequisites: the whole branch</dd></dl>`);
-  try { const r = await fetch("control.sealed.json", { cache: "no-store" }); if (r.ok) { sealedManifest = await r.json(); Object.assign(state.sealed, { published: true, stanzas: sealedManifest.sealed.stanzas, recipients: sealedManifest.sealed.recipients }); } } catch {}
+  try { const r = await fetch("control.sealed.json?t=" + Date.now(), { cache: "no-store" }); if (r.ok) { sealedManifest = await r.json(); Object.assign(state.sealed, { published: true, stanzas: sealedManifest.sealed.stanzas, recipients: sealedManifest.sealed.recipients }); } } catch {}
   chip("bottle read · " + state.bottle.files.length + " files", "ok");
   $("out").innerHTML = how.join("");
   route();
@@ -135,7 +136,7 @@ async function checkArrangement() {
 }
 async function openSealed() {
   if (!sealedManifest || !held || state.sealed.opened) return;
-  const u = await readBottle(sealedManifest.gif.file, true);
+  const u = await readBottle(sealedManifest.gif.file + "?v=" + encodeURIComponent(sealedManifest.transfer.id.slice(7, 23)), true);
   let opened;
   try { opened = await decrypt(held.identity, u.bytes); } catch { state.sealed.refused = true; chip("the sealed bottle refused this key", "bad"); return; }
   await openBundle(opened, true);
