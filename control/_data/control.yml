@@ -1,0 +1,4 @@
+# _data/control.yml — what the station knows about the state it is guiding you through.
+greeting: "You are holding the whole thing."
+state: first-contact
+steps: [key, sealed, files]

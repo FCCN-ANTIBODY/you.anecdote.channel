@@ -18,5 +18,5 @@ ok(objects.size === count && count >= 3, `readPack opened the pack: ${count} obj
 const c = parseCommit(objects.get(manifest.tip).content);
 ok(/^control: /.test(String(c.message)), "the tip is a control commit: " + String(c.message).trim());
 const files = filesAt(objects, manifest.tip).map((f) => f.path);
-ok(files.includes("CONTROL.md") && files.includes("channels.json"), "its files are there: " + files.join(", "));
+ok(files.includes("README.md") && files.includes("channels.json"), "its files are there: " + files.join(", "));
 if (fails) { console.error(`${fails} failed`); process.exit(1); } console.log("reader tests passed");

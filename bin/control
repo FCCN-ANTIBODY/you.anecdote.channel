@@ -1,7 +1,7 @@
 #!/bin/zsh
 # control — the branch whose HEAD is the payload. One commit, no history, force-pushed.
 #
-#     bin/control init     (re)make refs/heads/control: an orphan commit of CONTROL.md + channels.json
+#     bin/control init     (re)make refs/heads/control: an orphan commit of control/ + channels.json
 #     bin/control show     what it holds now
 #
 # Built with plumbing so the working tree is never touched: the payload is a tree written straight
@@ -13,24 +13,18 @@ ref=refs/heads/control
 case "${1:-}" in
   init)
     now=$(date -u +%Y-%m-%dT%H:%M:%SZ)
-    md=$(cat <<MD
-# control
-
-The payload branch of the control point at $(sed -nE 's/^url:[[:space:]]*"?([^"]+)"?/\1/p' you.yml | head -1).
-
-One commit, no parents, remade on every publish (\`bin/control init\`, \`bin/publish\`). What you are
-holding is the whole branch: there is nothing behind it to fast-forward from, and the next one you
-receive replaces it. An empty branch is a revoked one.
-
-written $now
-MD
-)
-    b1=$(print -r -- "$md" | git hash-object -w --stdin)
-    b2=$(git hash-object -w channels.json)
-    tree=$(printf '100644 blob %s\tCONTROL.md\n100644 blob %s\tchannels.json\n' "$b1" "$b2" | git mktree)
+    # control/ is the SOURCE of the payload, committed on main; the branch is its contents at the
+    # root plus channels.json, written through a temporary index so nested paths (_data/) work and
+    # the working tree is never touched.
+    idx=$(mktemp); rm -f "$idx"
+    for f in $(cd control && find . -type f | sed 's|^\./||' | sort); do
+      GIT_INDEX_FILE=$idx git update-index --add --cacheinfo "100644,$(git hash-object -w "control/$f"),$f"
+    done
+    GIT_INDEX_FILE=$idx git update-index --add --cacheinfo "100644,$(git hash-object -w channels.json),channels.json"
+    tree=$(GIT_INDEX_FILE=$idx git write-tree); rm -f "$idx"
     commit=$(git commit-tree "$tree" -m "control: $now")
     git update-ref "$ref" "$commit"
-    print "  $ref -> ${commit[1,7]}  (orphan, 2 files)"
+    print "  $ref -> ${commit[1,7]}  (orphan, $(git ls-tree -r --name-only "$ref" | wc -l | tr -d ' ') files)"
     ;;
   show|"")
     git rev-parse -q --verify "$ref" >/dev/null || { print "  no control branch. bin/control init"; exit 1; }

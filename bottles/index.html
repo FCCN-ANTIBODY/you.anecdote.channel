@@ -1,44 +1,37 @@
 <!doctype html>
 <html lang="en">
-<!-- bottles/ — read the control bottle with the camera off.
-     A stored bottle is a GIF of QR frames, one module per pixel. Because you already hold the file,
-     no camera is involved: the frames are read straight out of the pixels, fed to the same carrier
-     session a phone would use, verified, and the git bundle inside is opened by git-enough in this tab.
-     Transferring the GIF was transferring the bytes; this page is where that is checked. -->
+<!-- bottles/ — the consumer page. The bottle is the logo; what is INSIDE it is the site.
+     The control bottle (a GIF of QR frames) is read out of its own pixels, camera off, and its files
+     are rendered by jekyll-enough from source in this tab, with one injected data file, _data/you.json,
+     that says what this browser holds. README.md is the default page and the whole guided experience;
+     links resolve only into the bottle. Tapping the logo makes the bottle big; tapping again sends it
+     away. The station-side readouts sit under "how this got here", off to the side. -->
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="icon" href="/icon.svg">
-<title>you — bottles</title>
+<title>you</title>
 <style>
-  :root { color-scheme: light dark; }
-  body { margin: 0; padding: 1.2rem 1rem 3rem; font: 15px/1.55 system-ui, sans-serif; max-width: 44rem; margin-inline: auto; }
-  h1 { font-size: 1.6rem; margin: .2rem 0 .6rem; } h2 { font-size: 1.1rem; margin-top: 1.6rem; } h3 { font-size: 1rem; margin-top: 1rem; } h4 { font-size: .95rem; margin: .8rem 0 .2rem; }
-  button { font: inherit; padding: .4rem .8rem; margin: .2rem .3rem .2rem 0; cursor: pointer; } canvas { image-rendering: pixelated; margin-top: .5rem; max-width: 100%; }
-  dl { display: grid; grid-template-columns: max-content 1fr; gap: .2rem 1rem; } dt { opacity: .65; }
-  code, pre { font-family: ui-monospace, Menlo, monospace; font-size: .9em; } pre { background: rgba(127,127,127,.12); padding: .7rem; overflow-x: auto; white-space: pre-wrap; }
-  .ok { color: #1a7f37; } .bad { color: #b42318; } .muted { opacity: .7; }
-  img.bottle { image-rendering: pixelated; width: 292px; height: auto; border: 1px solid rgba(127,127,127,.4); }
+  :root { color-scheme: light dark; --bar: 3.4rem; }
+  body { margin: 0; font: 16px/1.6 system-ui, sans-serif; }
+  .bar { position: fixed; inset: 0 0 auto 0; height: var(--bar); display: flex; align-items: center; gap: .8rem; padding: 0 .8rem; background: Canvas; border-bottom: 1px solid rgba(127,127,127,.35); z-index: 5; }
+  .bar img { width: 2.6rem; height: 2.6rem; image-rendering: pixelated; border: 1px solid rgba(127,127,127,.5); cursor: pointer; }
+  .bar b { font-size: 1.1rem; } .chip { font-size: .8rem; opacity: .7; }
+  #big { position: fixed; inset: 0; background: rgba(0,0,0,.92); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1rem; z-index: 9; cursor: pointer; color: #eee; }
+  #big img { width: min(88vw, 88vh); image-rendering: pixelated; border: 6px solid #fff; }
+  main { max-width: 42rem; margin: 0 auto; padding: calc(var(--bar) + 1rem) 1rem 3rem; }
+  main h1 { font-size: 1.5rem; } main h2 { font-size: 1.15rem; margin-top: 1.8rem; }
+  code { font-family: ui-monospace, Menlo, monospace; font-size: .92em; } pre { background: rgba(127,127,127,.12); padding: .7rem; overflow-x: auto; white-space: pre-wrap; }
+  .act { display: inline-block; padding: .55rem 1rem; margin: .3rem .3rem .3rem 0; border: 1px solid currentColor; border-radius: .5rem; text-decoration: none; font-weight: 600; }
+  .act.muted { opacity: .65; font-weight: 400; }
+  .recipient code { word-break: break-all; } .muted { opacity: .7; } .ok { color: #1a7f37; } .bad { color: #b42318; }
+  canvas.still { image-rendering: pixelated; max-width: 100%; margin: .4rem 0 1rem; }
+  details { max-width: 42rem; margin: 0 auto 3rem; padding: 0 1rem; opacity: .8; } details dl { display: grid; grid-template-columns: max-content 1fr; gap: .15rem .8rem; font-size: .9rem; } details dt { opacity: .65; }
 </style>
 <body>
-<h1>bottles</h1>
-<p class="muted">camera: <b>off</b>. What follows is read out of the file's pixels, not a lens.</p>
-<section id="key">
-<h2>your key</h2>
-<p class="muted">An age identity your passkey derives on every visit and never stores (D12: derived, not enrolled). Its public half, printed below, is the enrollment still: one QR, one glance, and a line in <a href="/recipients.txt">recipients.txt</a> is the arrangement.</p>
-<p>
-  <button id="enroll">enroll — mint a passkey with prf</button>
-  <button id="derive">derive — the gesture</button>
-  <button id="fallback">no prf here — mint an at-rest identity instead</button>
-</p>
-<div id="keyout" class="muted">no identity in memory.</div>
-<canvas id="still" hidden></canvas>
-</section>
-<section id="sealed">
-<h2>sealed bottle</h2>
-<div id="sealedout" class="muted">…</div>
-</section>
-<h2>clear bottle</h2>
-<div id="out"><p class="muted">reading control.json…</p></div>
+<header class="bar"><img id="logo" src="control.gif" alt="the bottle — tap to see it big"><div><b>you</b><br><span id="chip" class="chip">reading the bottle…</span></div></header>
+<div id="big" hidden><img src="control.gif" alt="the bottle, big"><p>that is the whole payload, playing. tap to send it back.</p></div>
+<main id="page"><p class="muted">Reading the bottle out of its pixels…</p></main>
+<details id="how"><summary>how this got here</summary><div id="out" class="muted">…</div></details>
 
 <script type="module">
 import { unbottle } from "../bottle/bottle.mjs";
@@ -48,103 +41,105 @@ import { parseCommit, filesAt } from "../anecdote.channel/git-enough/read.mjs";
 import { defaultHash } from "../anecdote.channel/composer/anecdote.mjs";
 import { decrypt } from "../anecdote.channel/composer/age-seal.mjs";
 import { encodeQR } from "../anecdote.channel/composer/qr-encode.mjs";
+import { buildSite } from "../anecdote.channel/jekyll-enough/build.mjs";
+import { render as renderMarkdown } from "../anecdote.channel/press/markdown-more.mjs";
 import { capabilities, enroll, derive, mintFallback } from "../bottle/you-key.mjs";
 
-const out = document.getElementById("out");
+const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;");
 const td = new TextDecoder();
-const sections = [];
-const say = () => { out.innerHTML = sections.join("\n"); };
-const add = (h) => { sections.push(h); say(); };
+const chip = (t, cls = "") => { $("chip").className = "chip " + cls; $("chip").textContent = t; };
+$("logo").onclick = () => { $("big").hidden = false; }; $("big").onclick = () => { $("big").hidden = true; };
+
+// ---- state: what this browser holds, injected into the bottle's tree as _data/you.json ----------------
+const cap = capabilities();
+const state = { secure: cap.secure, webauthn: cap.webauthn, credId: !!cap.credId, held: false, source: null, recipient: null, enrolled_here: false,
+                sealed: { published: false, stanzas: 0, recipients: [], opened: false, refused: false },
+                bottle: { ref: "", tip: "", tip_short: "", frames: 0, by: "", by_short: "", files: [] } };
+let held = null, tree = {}, manifest = null, sealedManifest = null, how = [];
+
+// ---- read the clear bottle ------------------------------------------------------------------------
+async function readBottle(gifFile, sealedFlag) {
+  const gif = new Uint8Array(await (await fetch(gifFile, { cache: "no-store" })).arrayBuffer());
+  const u = await unbottle(gif);
+  if (!u.ok) throw new Error("the bottle did not verify: " + u.errors.join("; "));
+  return u;
+}
+async function openBundle(bytes, sealedFlag) {
+  const b = parseBundle(bytes);
+  const { objects, count } = await readPack(b.pack);
+  const tip = b.refs[0];
+  const files = filesAt(objects, tip.oid);
+  for (const f of files) {
+    const o = objects.get(f.oid); if (!o) continue;
+    tree[f.path] = td.decode(o.content);
+    const i = state.bottle.files.findIndex((x) => x.path === f.path);
+    const meta = { path: f.path, bytes: o.content.length, sealed: !!sealedFlag };
+    if (i >= 0) state.bottle.files[i] = meta; else state.bottle.files.push(meta);
+  }
+  return { b, tip, count, commit: parseCommit(objects.get(tip.oid).content), files };
+}
 
 try {
-  const m = await (await fetch("control.json", { cache: "no-store" })).json();
-  add(`<h2>published</h2><dl>
-    <dt>ref</dt><dd><code>${esc(m.ref)}</code> at <code>${esc(m.tip.slice(0, 7))}</code></dd>
-    <dt>bundle</dt><dd><a href="${esc(m.bundle.file)}">${esc(m.bundle.file)}</a> · ${m.bundle.bytes} bytes · <code>${esc(m.bundle.sha256.slice(0, 23))}…</code></dd>
-    <dt>bottle</dt><dd><a href="${esc(m.gif.file)}">${esc(m.gif.file)}</a> · ${m.gif.bytes} bytes · ${m.gif.frames} frames of v${m.gif.version} (${m.gif.size}px, ${esc(m.gif.ecLevel)})</dd>
-    <dt>signed by</dt><dd><code>${esc(m.transfer.by)}</code></dd>
-    <dt>created</dt><dd>${esc(m.created)}</dd></dl>
-    <p><img class="bottle" src="${esc(m.gif.file)}" alt="the stored bottle, one module per pixel"> <span class="muted">← that is the whole payload, playing.</span></p>`);
-
-  const gif = new Uint8Array(await (await fetch(m.gif.file, { cache: "no-store" })).arrayBuffer());
-  const u = await unbottle(gif);
-  add(`<h2>read back</h2><dl>
-    <dt>frames</dt><dd>${u.decoded} of ${u.frames} decoded</dd>
-    <dt>transfer</dt><dd>${u.ok ? '<span class="ok">verified</span>' : '<span class="bad">NOT verified</span>'} ${esc(u.errors.join("; "))}</dd>
-    <dt>by</dt><dd><code>${esc(u.by || "?")}</code> ${u.by === m.transfer.by ? '<span class="ok">— as published</span>' : '<span class="bad">— differs from the manifest</span>'}</dd>
-    <dt>kind</dt><dd><code>${esc(u.kind || "?")}</code></dd></dl>`);
-  if (!u.ok) throw new Error("the bottle did not verify");
-
+  manifest = await (await fetch("control.json", { cache: "no-store" })).json();
+  const u = await readBottle(manifest.gif.file);
   const sha = await defaultHash(u.bytes);
-  add(`<dl><dt>bytes</dt><dd>${u.bytes.length} · <code>${esc(sha.slice(0, 23))}…</code> ${sha === m.bundle.sha256 ? '<span class="ok">— the GIF is the bytes</span>' : '<span class="bad">— does not match the published bundle</span>'}</dd></dl>`);
+  const { b, tip, count, commit } = await openBundle(u.bytes, false);
+  Object.assign(state.bottle, { ref: tip.ref, tip: tip.oid, tip_short: tip.oid.slice(0, 7), frames: u.frames, by: u.by, by_short: u.by.slice(0, 27) });
+  how.push(`<dl><dt>published</dt><dd><code>${esc(manifest.ref)}</code> at <code>${esc(manifest.tip.slice(0, 7))}</code>, ${esc(manifest.created)}</dd>
+    <dt>bottle</dt><dd><a href="${esc(manifest.gif.file)}">${esc(manifest.gif.file)}</a> · ${manifest.gif.bytes} bytes · ${manifest.gif.frames} frames of v${manifest.gif.version}</dd>
+    <dt>read back</dt><dd>${u.decoded} of ${u.frames} frames · <span class="ok">verified</span> · by <code>${esc(u.by)}</code> ${u.by === manifest.transfer.by ? '<span class="ok">as published</span>' : '<span class="bad">differs</span>'}</dd>
+    <dt>bytes</dt><dd>${u.bytes.length} · <code>${esc(sha.slice(0, 23))}…</code> ${sha === manifest.bundle.sha256 ? '<span class="ok">the GIF is the bytes</span>' : '<span class="bad">mismatch</span>'} · <a href="${esc(manifest.bundle.file)}">${esc(manifest.bundle.file)}</a></dd>
+    <dt>inside</dt><dd>${b.refs.map((r) => `<code>${esc(r.ref)}</code> → <code>${esc(r.oid.slice(0, 7))}</code>`).join(", ")} · ${count} objects · <code>${esc(String(commit.message).trim())}</code> · no prerequisites: the whole branch</dd></dl>`);
+  try { const r = await fetch("control.sealed.json", { cache: "no-store" }); if (r.ok) { sealedManifest = await r.json(); Object.assign(state.sealed, { published: true, stanzas: sealedManifest.sealed.stanzas, recipients: sealedManifest.sealed.recipients }); } } catch {}
+  chip("bottle read · " + state.bottle.files.length + " files", "ok");
+  $("out").innerHTML = how.join("");
+  route();
+} catch (e) { chip("could not read the bottle", "bad"); $("page").innerHTML = `<p class="bad">${esc(e && e.message || e)}</p>`; }
 
-  await inside(u.bytes, add);
-} catch (e) {
-  add(`<p class="bad">${esc(e && e.message || e)}</p>`);
+// ---- render: jekyll-enough over the bottle's tree, with what this browser holds ----------------------
+function build() {
+  const gaps = [];
+  const out = buildSite({ ...tree, "_data/you.json": JSON.stringify(state) }, { lenient: true, gaps, renderMarkdown });
+  return { out, gaps };
 }
-
-// Open a bundle in the tab: refs, the tip commit, its files, and small text files in full.
-async function inside(bytes, add) {
-  const bundle = parseBundle(bytes);
-  const { objects } = await readPack(bundle.pack);   // { objects: Map oid -> {type, content}, count, version }
-  const tipRef = bundle.refs[0];
-  const commit = objects.get(tipRef.oid);
-  const c = parseCommit(commit.content);
-  const files = filesAt(objects, tipRef.oid);
-  add(`<h3>inside</h3><dl>
-    <dt>refs</dt><dd>${bundle.refs.map((r) => `<code>${esc(r.ref)}</code> → <code>${esc(r.oid.slice(0, 7))}</code>`).join("<br>")}</dd>
-    <dt>prerequisites</dt><dd>${bundle.prerequisites.length ? esc(bundle.prerequisites.join(", ")) : '<span class="muted">none — this is the whole branch, nothing to fast-forward from</span>'}</dd>
-    <dt>objects</dt><dd>${objects.size} in the pack</dd>
-    <dt>commit</dt><dd><code>${esc(String(c.message).trim())}</code><br><span class="muted">${esc(c.author || "")}</span></dd>
-    <dt>files</dt><dd>${files.map((f) => `<code>${esc(f.path)}</code> <span class="muted">${(objects.get(f.oid)?.content?.length ?? "?")} bytes</span>`).join("<br>")}</dd></dl>`);
-  for (const f of files) {
-    const o = objects.get(f.oid); if (!o || o.content.length > 4096) continue;
-    add(`<h4><code>${esc(f.path)}</code></h4><pre>${esc(td.decode(o.content))}</pre>`);
-  }
-  add(`<p class="muted">That is a clone, in a tab, from a picture. No remote, no network after the fetch, and the camera never came on.</p>`);
+function route() {
+  const want = (location.hash.replace(/^#\/?/, "") || "README.md");
+  if (!(want in tree)) { $("page").innerHTML = `<h1>did not answer</h1><p><code>${esc(want)}</code> is not in the bottle. <a href="#/README.md">back to the start</a>.</p>`; return; }
+  const { out, gaps } = build();
+  const key = "_site/" + want.replace(/\.md$/, ".html");
+  let html = out[key];
+  if (html == null) html = `<pre>${esc(tree[want])}</pre>`;                 // a file with no front matter is shown as itself
+  $("page").innerHTML = html + (gaps.length ? `<p class="muted">the engine lacked: ${esc([...new Set(gaps)].join(", "))}</p>` : "");
+  const r = $("page").querySelector(".recipient");
+  if (r && held) { const q = encodeQR(held.recipient, { ecLevel: "M" }), m = 5, quiet = 4, px = (q.size + 2 * quiet) * m; const c = document.createElement("canvas"); c.className = "still"; c.width = c.height = px; const g = c.getContext("2d"); g.fillStyle = "#fff"; g.fillRect(0, 0, px, px); g.fillStyle = "#000"; for (let y = 0; y < q.size; y++) for (let x = 0; x < q.size; x++) if (q.modules[y][x]) g.fillRect((x + quiet) * m, (y + quiet) * m, m, m); r.after(c); }
+  window.scrollTo(0, 0);
 }
+addEventListener("hashchange", () => { if (!location.hash.startsWith("#you/")) route(); });
 
-// ---- your key ---------------------------------------------------------------------------------------
-let held = null;   // { identity, recipient, source } — memory only
-const keyout = document.getElementById("keyout"), still = document.getElementById("still");
-const cap = capabilities();
-if (!cap.secure || !cap.webauthn) keyout.innerHTML = '<span class="bad">no WebAuthn in this context; only the fallback is possible.</span>';
-else if (cap.credId) keyout.textContent = "a credential is remembered for this origin; derive to hold its identity.";
-function showKey(k) {
-  held = k;
-  keyout.innerHTML = `<dl><dt>recipient</dt><dd><code>${esc(k.recipient)}</code></dd><dt>source</dt><dd>${esc(k.source)}</dd><dt>identity</dt><dd class="muted">in memory only; not shown</dd></dl>
-    <p class="muted">Add a line to recipients.txt: <code>&lt;moniker&gt;  ${esc(k.recipient)}</code></p>`;
-  const q = encodeQR(k.recipient, { ecLevel: "M" }), m = 6, quiet = 4, px = (q.size + 2 * quiet) * m;
-  still.width = still.height = px; still.hidden = false;
-  const g = still.getContext("2d"); g.fillStyle = "#fff"; g.fillRect(0, 0, px, px); g.fillStyle = "#000";
-  for (let r = 0; r < q.size; r++) for (let c = 0; c < q.size; c++) if (q.modules[r][c]) g.fillRect((c + quiet) * m, (r + quiet) * m, m, m);
-  openSealed();
-}
-document.getElementById("enroll").onclick = async () => { try { const r = await enroll(); keyout.innerHTML = r.enabled ? "enrolled with prf. now derive." : '<span class="bad">the authenticator refused prf for this credential; it cannot derive. delete it and use the fallback, or another authenticator.</span>'; } catch (e) { keyout.innerHTML = `<span class="bad">${esc(e.message)}</span>`; } };
-document.getElementById("derive").onclick = async () => { try { showKey(await derive()); } catch (e) { keyout.innerHTML = `<span class="bad">${esc(e.message)}</span>`; } };
-document.getElementById("fallback").onclick = async () => { try { showKey(await mintFallback()); } catch (e) { keyout.innerHTML = `<span class="bad">${esc(e.message)}</span>`; } };
-
-// ---- the sealed bottle --------------------------------------------------------------------------------
-const sealedout = document.getElementById("sealedout");
-let sealedManifest = null;
-try { const r = await fetch("control.sealed.json", { cache: "no-store" }); if (r.ok) sealedManifest = await r.json(); } catch {}
-if (!sealedManifest) sealedout.innerHTML = "no sealed bottle is published: recipients.txt names nobody yet.";
-else sealedout.innerHTML = `sealed to ${sealedManifest.sealed.stanzas} recipient(s): <code>${esc(sealedManifest.sealed.recipients.join(", "))}</code> · <a href="${esc(sealedManifest.gif.file)}">${esc(sealedManifest.gif.file)}</a> ${sealedManifest.gif.bytes} bytes, ${sealedManifest.gif.frames} frames. <span class="muted">hold an identity above to open it.</span>`;
-async function openSealed() {
-  if (!sealedManifest || !held) return;
-  const parts = []; const say2 = () => { sealedout.innerHTML = parts.join("\n"); }; const add2 = (h) => { parts.push(h); say2(); };
+// ---- the wizard's verbs: links in the README, answered here -------------------------------------------
+document.addEventListener("click", async (ev) => {
+  const a = ev.target.closest("a[href^='#you/']"); if (!a) return;
+  ev.preventDefault();
+  const verb = a.getAttribute("href").slice(5);
   try {
-    const gif = new Uint8Array(await (await fetch(sealedManifest.gif.file, { cache: "no-store" })).arrayBuffer());
-    const u = await unbottle(gif);
-    add2(`<dl><dt>frames</dt><dd>${u.decoded} of ${u.frames}</dd><dt>transfer</dt><dd>${u.ok ? '<span class="ok">verified</span>' : '<span class="bad">NOT verified</span>'} · <code>${esc(u.kind || "?")}</code> by <code>${esc((u.by || "?").slice(0, 27))}…</code></dd></dl>`);
-    if (!u.ok) throw new Error("the sealed bottle did not verify");
-    let opened;
-    try { opened = await decrypt(held.identity, u.bytes); }
-    catch (e) { add2(`<p class="bad">this identity (${esc(held.recipient.slice(0, 16))}…) has no stanza in it: not a recipient. ${esc(e.message)}</p>`); return; }
-    add2(`<p class="ok">opened with your ${esc(held.source)} identity: ${opened.length} bytes inside.</p>`);
-    await inside(opened, add2);
-  } catch (e) { add2(`<p class="bad">${esc(e && e.message || e)}</p>`); }
+    if (verb === "enroll") { const r = await enroll(); state.credId = r.enabled; if (!r.enabled) throw new Error("this authenticator refused prf; the credential cannot derive. Use the fallback or another device."); chip("passkey minted — now derive", "ok"); }
+    else if (verb === "derive" || verb === "fallback") { held = verb === "derive" ? await derive() : await mintFallback(); Object.assign(state, { held: true, source: held.source, recipient: held.recipient }); await checkArrangement(); chip("key held (" + held.source + ")", "ok"); if (state.sealed.published) await openSealed(); }
+    else if (verb === "open") { await openSealed(); }
+  } catch (e) { chip(e.message, "bad"); }
+  route();
+});
+async function checkArrangement() {
+  try { const t = await (await fetch("/recipients.txt", { cache: "no-store" })).text(); state.enrolled_here = held && t.split("\n").some((l) => l.replace(/#.*/, "").split(/\s+/).includes(held.recipient)); } catch {}
+}
+async function openSealed() {
+  if (!sealedManifest || !held || state.sealed.opened) return;
+  const u = await readBottle(sealedManifest.gif.file, true);
+  let opened;
+  try { opened = await decrypt(held.identity, u.bytes); } catch { state.sealed.refused = true; chip("the sealed bottle refused this key", "bad"); return; }
+  await openBundle(opened, true);
+  state.sealed.opened = true; state.sealed.refused = false;
+  chip("sealed bottle opened · " + state.bottle.files.length + " files", "ok");
 }
 </script>
 </body>
