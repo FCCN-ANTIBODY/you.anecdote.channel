@@ -1,3 +1,3 @@
-bottles: keep _data/ out of the consumer's file list
+docs: two cache knobs, and which one a "cache for a day" rule is
 
-The README reads it (site.data.control drives the greeting; proven by a local build); a person has nowhere to go in it. Still in the bottle, still routable by hash, just not listed.
+The browser half is fixed (a Cache Rule now lets `_headers` max-age=0 through; the zone had been rewriting it to 300). The remaining staleness is Edge TTL, which only a Cache Rule sets and which a longer TTL makes worse. Corrects a claim in OPEN.md §2b and `_headers` that is no longer true.

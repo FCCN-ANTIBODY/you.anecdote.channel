@@ -9,10 +9,20 @@
 # (an ETag round-trip, 304 if unchanged). bin/deploy's post-check fetches the CORS variant of every
 # file and refuses to finish while any one of them differs from the tree.
 #
-# MEASURED AFTER THIS LANDED: the Pages origin (you-discoverywritten.pages.dev) serves max-age=0 as
-# asked; the custom domain rewrites it to max-age=300 and caches anyway. That is a ZONE setting on
-# discoverywritten.com (Caching → Configuration: Browser Cache TTL / a Cache Rule), which overrides
-# what the origin says, and only the dashboard can change it: a Cache Rule for this hostname set to
-# Bypass, plus one Purge to clear what is already held. This file stays true for the origin.
+# THIS FILE ONLY ADDRESSES ONE OF THE TWO CACHES, and knowing which is the whole trick:
+#
+#   Browser Cache TTL   what the visitor is told -- the `max-age` in the response. THIS file, when
+#                       the zone is set to respect origin headers. Fixed 2026-09-21: the zone had
+#                       been rewriting max-age=0 to max-age=300, and a Cache Rule now lets it pass.
+#   Edge Cache TTL      how long Cloudflare's own edge keeps the object. NOT settable from here at
+#                       all -- only a Cache Rule sets it -- and it is what actually decides whether
+#                       a deploy is visible. Measured after the browser half was fixed:
+#                       `cache-control: max-age=0, must-revalidate` with `cf-cache-status: HIT` and
+#                       `age: 4142`. The browser is behaving perfectly and revalidating every time;
+#                       the edge answers that revalidation from its own hours-old copy.
+#
+# So a rule that says "cache for a day" makes this WORSE, not better: it is the edge half, and a
+# longer edge TTL is a longer lie. What this site wants is Edge TTL = Bypass, because Pages is
+# already a global CDN and a second cache in front of it buys nothing and costs correctness.
 /*
   Cache-Control: public, max-age=0, must-revalidate

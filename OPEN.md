@@ -21,13 +21,29 @@ wildcard custom domain on the project (`anecdote.channel/docs/flooring.md` recor
 test and the assets-only-Worker fallback), and an edge certificate that covers the second label —
 Universal SSL stops at `*.discoverywritten.com`.
 
-## 2b. The zone caches over the origin's head
+## 2b. Two caches, one fixed and one not
 
-`you.discoverywritten.com` is served through the discoverywritten.com zone, whose cache settings
-rewrite `Cache-Control` to `max-age=300` and hold CORS variants of modules for hours past a deploy;
-the Pages origin itself honours `_headers` (`max-age=0`). Until a Cache Rule bypasses this hostname
-and the held copies are purged, browsers can run the previous deploy's modules while `bin/deploy`
-correctly refuses to call the deploy done. Dashboard only; the token here cannot purge.
+There are two knobs and they are commonly mistaken for one:
+
+| knob | what it governs | who can set it |
+| --- | --- | --- |
+| **Browser Cache TTL** | the `max-age` the visitor is told | zone Caching → Configuration, or a Cache Rule |
+| **Edge Cache TTL** | how long Cloudflare's edge keeps the object | **a Cache Rule only** |
+
+**Rules beat the Caching Configuration page**, which is why the first half is now right: the zone had
+been rewriting `max-age=0` to `max-age=300`, and a Cache Rule respecting origin headers fixed it.
+Measured 2026-09-21 afterwards: `cache-control: public, max-age=0, must-revalidate` — as `_headers`
+asks — with `cf-cache-status: HIT` and `age: 4142`. The browser is revalidating on every request,
+exactly as told, and **the edge answers that revalidation out of its own hours-old copy.**
+
+So the remaining staleness is entirely Edge TTL, and a rule reading "cache for a day" is pointed the
+wrong way — it is this half, and a longer edge TTL is a longer lie. This site wants **Edge TTL =
+Bypass**: Pages is already a global CDN, so a second cache in front of it buys nothing and costs
+correctness. Dashboard only; the token here cannot purge or set rules.
+
+The page no longer depends on this being right — `control.json` is asked for with a fresh query
+every time and the artifacts it names carry the transfer id in their URL — but `bin/deploy` will keep
+refusing to call a deploy done while any file differs, which is the honest report.
 
 ## 3. The tools shelf and the press are mounted; the runtime is not
 
