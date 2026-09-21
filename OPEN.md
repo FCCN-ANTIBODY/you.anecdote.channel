@@ -21,6 +21,14 @@ wildcard custom domain on the project (`anecdote.channel/docs/flooring.md` recor
 test and the assets-only-Worker fallback), and an edge certificate that covers the second label —
 Universal SSL stops at `*.discoverywritten.com`.
 
+## 2b. The zone caches over the origin's head
+
+`you.discoverywritten.com` is served through the discoverywritten.com zone, whose cache settings
+rewrite `Cache-Control` to `max-age=300` and hold CORS variants of modules for hours past a deploy;
+the Pages origin itself honours `_headers` (`max-age=0`). Until a Cache Rule bypasses this hostname
+and the held copies are purged, browsers can run the previous deploy's modules while `bin/deploy`
+correctly refuses to call the deploy done. Dashboard only; the token here cannot purge.
+
 ## 3. The tools shelf and the press are mounted; the runtime is not
 
 `git-enough/`, `composer/`, `press/`, `jekyll-enough/`, `reducer/`, `viewer/`, `assets/` and

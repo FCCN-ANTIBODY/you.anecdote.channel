@@ -8,5 +8,11 @@
 # what you get, so the edge is told not to keep any of it and browsers are told to ask every time
 # (an ETag round-trip, 304 if unchanged). bin/deploy's post-check fetches the CORS variant of every
 # file and refuses to finish while any one of them differs from the tree.
+#
+# MEASURED AFTER THIS LANDED: the Pages origin (you-discoverywritten.pages.dev) serves max-age=0 as
+# asked; the custom domain rewrites it to max-age=300 and caches anyway. That is a ZONE setting on
+# discoverywritten.com (Caching → Configuration: Browser Cache TTL / a Cache Rule), which overrides
+# what the origin says, and only the dashboard can change it: a Cache Rule for this hostname set to
+# Bypass, plus one Purge to clear what is already held. This file stays true for the origin.
 /*
   Cache-Control: public, max-age=0, must-revalidate
