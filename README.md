@@ -1,6 +1,12 @@
 # you.anecdote.channel
 
-**The control point: one origin whose only job is to be the HTTPS context a passkey can be meaningful in, and the index of the channels it will answer for.**
+**The engine for a control point — code, wielded by a node. It is not a site and it deploys nothing.**
+
+> **There is no site at `you.anecdote.channel`.** This repository holds the pages, the bottle codec,
+> the wizard and the verbs; a *node* that mounts it at `.you-engine` holds the instance (`you.yml` at
+> that node's root, the way `advocate.yml` sits beside `.advocate-engine`) and does the building and
+> the deploying. `bin/host` is how these bytes find that node, and a bare clone correctly reports
+> that it has none.
 
 > Provisioned 2026-09-21. The address `you.<apex>` was ruled on 2026-09-02 in
 > `anecdote.channel/docs/decisions.md` **D12**: *the keeper moves to `you.<apex>`, and that is the RP ID.*
@@ -46,7 +52,7 @@ visit and stored nowhere. That is `git-enough/held-token.mjs`'s crown with a ret
     bin/test         the suites in bottle/
     mounts.txt       which directories of each submodule are the site
     bin/mount        apply that: a sparse checkout, re-applied by a verb
-    bin/deploy       upload it from the workstation. Refuses a fat mount.
+    (the node deploys; this engine does not — see bin/host)
     anecdote.channel the tools shelf and the press — eight entries of the apex, ~2.8 MB of its 50
     _redirects       two rewrites so the press skins find the apex's assets under the mount
     _headers         nothing is kept at the edge; a deploy is what you get. It says why.

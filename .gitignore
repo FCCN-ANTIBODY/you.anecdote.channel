@@ -1,2 +1,5 @@
+state/
+bottles/control.*
+you.yml
 .wrangler/
 node_modules/
