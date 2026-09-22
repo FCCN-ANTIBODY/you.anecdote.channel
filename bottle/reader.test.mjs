@@ -2,6 +2,8 @@
 // GIF -> frames -> verified transfer -> bundle header -> readPack -> the commit and its files.
 // bin/publish proves the bytes come back; this proves the bytes are a repository a tab can open.
 import { readFileSync } from "node:fs";
+import { existsSync } from "node:fs";
+if (!existsSync("bottles/control.json")) { console.log("SKIP reader.test.mjs — no published artifact here; an engine holds no instance (bin/host)"); process.exit(0); }
 import { unbottle } from "./bottle.mjs";
 import { parseBundle } from "./bundle.mjs";
 import { readPack } from "../anecdote.channel/git-enough/unpack.mjs";

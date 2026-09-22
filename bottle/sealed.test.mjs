@@ -1,6 +1,8 @@
 // node bottle/sealed.test.mjs — the sealed round trip: an identity from 32 bytes (the prf path, minus the
 // authenticator), the bundle sealed to its recipient as a real age file, bottled, read back, opened.
 import { readFileSync } from "node:fs";
+import { existsSync } from "node:fs";
+if (!existsSync("bottles/control.bundle")) { console.log("SKIP sealed.test.mjs — no published artifact here; an engine holds no instance (bin/host)"); process.exit(0); }
 import { generateIdentity } from "../anecdote.channel/composer/sign.mjs";
 import { encodeIdentity, recipientOf, mintAgeIdentity } from "../anecdote.channel/composer/age-mint.mjs";
 import { encrypt, decrypt } from "../anecdote.channel/composer/age-seal.mjs";
