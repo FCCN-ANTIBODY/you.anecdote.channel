@@ -1,0 +1,70 @@
+#!/usr/bin/python3
+"""verify — can this tree actually be served? The engine's own guarantee, run by whoever deploys.
+
+    bin/verify <dir>     every reference in <dir>'s pages must resolve. exit 1 if one does not.
+
+THE ENGINE'S JOB, NOT THE NODE'S. This engine packages what a node deploys, and the operator's rule
+is that it should be *incapable of publishing a thing that doesn't work*. So the check that a
+composed tree holds together lives here, with the machinery that composed it, and a node calls it
+rather than reimplementing it. A node that wrote its own version would be a second opinion about
+whether this engine's own output is sound.
+
+WHAT IS NOT AUDITED, and why. A vendored mount — `anecdote.channel/` — is another repository's tree
+carrying its own demo pages, which reach for things a node deliberately does not mount. Holding it
+to this engine's standard would be asserting a contract it never agreed to. What must resolve is
+what this engine put there.
+"""
+import os
+import re
+import sys
+
+SKIP_ROOTS = {"anecdote.channel"}
+PAT = re.compile(r"""(?:from|import)\s*\(?\s*["']([^"']+)["']|(?:src|href)=["']([^"']+)["']""")
+
+
+def verify(out):
+    missing, checked = [], 0
+    for base, _, fs in os.walk(out):
+        rel0 = os.path.relpath(base, out).split(os.sep)[0]
+        if rel0 in SKIP_ROOTS:
+            continue
+        for f in fs:
+            if not f.endswith((".html", ".mjs")):
+                continue
+            src = os.path.join(base, f)
+            for m in PAT.finditer(open(src, encoding="utf-8", errors="replace").read()):
+                ref = (m.group(1) or m.group(2) or "").split("?")[0].split("#")[0]
+                if (not ref or ref.startswith(("http", "data:", "mailto:", "//", "node:"))
+                        or "${" in ref or ("/" not in ref and "." not in ref)):
+                    continue
+                target = (os.path.join(out, ref.lstrip("/")) if ref.startswith("/")
+                          else os.path.join(base, ref))
+                checked += 1
+                if os.path.exists(target) or os.path.exists(target + ".html"):
+                    continue
+                if ref.startswith(("/assets/", "/icon.svg")) and os.path.exists(
+                        os.path.join(out, "anecdote.channel", ref.lstrip("/"))):
+                    continue      # `_redirects` rewrites these two into the mount
+                missing.append("%s -> %s" % (os.path.relpath(src, out), ref))
+    return missing, checked
+
+
+def main():
+    if len(sys.argv) < 2:
+        sys.exit("usage: bin/verify <dir>")
+    out = sys.argv[1]
+    if not os.path.isdir(out):
+        sys.exit("bin/verify: no such tree: " + out)
+    missing, checked = verify(out)
+    if missing:
+        print("  %d of %d reference(s) do not resolve:" % (len(missing), checked))
+        for m in missing[:12]:
+            print("    " + m)
+        print("  A page that cannot reach what it imports is a 404 in a browser and fine on disk.")
+        return 1
+    print("  tree resolves — %d reference(s), none dangling" % checked)
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

@@ -27,7 +27,7 @@ engine: "https://you.anecdote.channel"
 # The branch whose HEAD is what gets bundled and published. Force-pushed on purpose:
 # it carries one commit and no history, so killing it revokes everything at once, and
 # an empty branch of any age publishes the same bytes as any other empty branch.
-control_branch: control
+branch: you                             # the wing this engine packages, addressable in isolation
 
 # A secure-context origin for PROBING only — does `prf` answer on this phone? Never
 # mint a credential here that anyone is meant to keep: it binds to the wrong RP ID.

@@ -1,7 +1,12 @@
 #!/bin/zsh
-# control — the branch whose HEAD is the payload. One commit, no history, force-pushed.
+# control — build the `you` branch: the wing this engine packages, as one commit with no history.
 #
-#     bin/control init [wizard]   (re)make refs/heads/control: an orphan commit of wizards/<wizard>/ + channels.json (default greet)
+# THE BRANCH IS CALLED `you`, NOT `control`. It is the same thing as a `.you` wing in a library —
+# a root of stuff that gets dropped off — and `control` was a name that described the traffic
+# rather than the place. Kept as a branch so it is addressable in isolation; the verb keeps its
+# name because what it does is still control the payload.
+#
+#     bin/control init [wizard]   (re)make refs/heads/you: an orphan commit of wizards/<wizard>/ + channels.json (default greet)
 #     bin/control show     what it holds now
 #
 # Built with plumbing so the working tree is never touched: the payload is a tree written straight
@@ -9,7 +14,7 @@
 # outright, which is the design (README: "Revocation is an empty branch") -- there is nothing on it
 # worth keeping between publishes, because what was published is what the recipients hold.
 emulate -L zsh; set -euo pipefail; cd "${0:A:h:h}"
-ref=refs/heads/control
+ref=refs/heads/you
 case "${1:-}" in
   init)
     wiz=${2:-greet}; src=wizards/$wiz; [[ -d $src ]] || { print -u2 "control: no wizard at $src"; exit 1; }
