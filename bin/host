@@ -4,6 +4,7 @@
     bin/host              which node is hosting these bytes, and what it answers
     bin/host path <label> where the host keeps one wanted label; prints nothing if unbound
     bin/host instance     the instance values, as `key=value` lines
+    bin/host recipients   the arrangement: who may open a sealed bottle here, one per line
 
 AN ENGINE HOLDS NO INSTANCE. That is the rule every other engine on a station already keeps:
 `.stagecraft-engine`, `.proofing-engine` and `.estray-engine` carry no `NAME` and no instance file
@@ -70,6 +71,33 @@ def path_for(label, h=None):
     return instance_file(h)
 
 
+def recipients(h=None):
+    """The arrangement -- who may open a sealed bottle here -- read from the NODE.
+
+    `wants:` declares this as the `arrangement` label, and the host answers it in its `you.yml`.
+    `recipients: []` is a true answer meaning nobody, and the sealed bottle is simply not cut. A
+    list beneath it is `<moniker> <age-recipient>` per line.
+
+    THE ENGINE USED TO CARRY `recipients.txt` ITSELF, which put one operator's arrangement inside
+    a repository meant to be wielded by anyone. It was removed on 2026-09-22 and `bin/publish` kept
+    reading it, so publishing was broken until this existed -- the honest shape of that mistake.
+    """
+    path = instance_file(h or host())
+    if not path or not os.path.exists(path):
+        return []
+    out, inside = [], False
+    for raw in open(path):
+        line = raw.split("#")[0].rstrip()
+        if not line.strip():
+            continue
+        if not line[:1].isspace():
+            inside = line.split(":", 1)[0].strip() == "recipients"
+            continue
+        if inside and line.strip().startswith("- "):
+            out.append(line.strip()[2:].strip().strip('"\''))
+    return out
+
+
 def require():
     """The host, or a stop. Every verb that needs an instance calls this."""
     h = host()
@@ -88,6 +116,10 @@ def main():
         if p:
             print(p)
         return 0 if p else 1
+    if a and a[0] == "recipients":
+        for r in recipients(h):
+            print(r)
+        return 0
     if a and a[0] == "instance":
         for k, v in sorted(instance(h).items()):
             print("%s=%s" % (k, v))
@@ -101,6 +133,9 @@ def main():
     print("  instance    %s" % (instance_file(h) if inst else "declared and unanswered — no you.yml at the node root"))
     for k, v in sorted(inst.items()):
         print("    %-10s %s" % (k, v))
+    rs = recipients(h)
+    print("  arrangement %s" % ("%d recipient(s)" % len(rs) if rs else
+                                "nobody yet — `recipients:` in you.yml is the arrangement"))
     for label in ("bottles",):
         p = path_for(label, h)
         print("  %-11s %s%s" % (label, p, "" if os.path.exists(p) else "   (absent)"))
