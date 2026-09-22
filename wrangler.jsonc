@@ -1,7 +1,0 @@
-{
-  // Cloudflare Pages, deployed from the workstation (bin/deploy). No build: the
-  // repository is the site, uploaded as committed.
-  "name": "you-discoverywritten",
-  "pages_build_output_dir": ".",
-  "compatibility_date": "2026-09-21"
-}

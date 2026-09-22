@@ -1,6 +1,0 @@
-# Cloudflare Pages rewrites (status 200 = serve the target, keep the URL). Committed, no build.
-# The press skins link the apex design system and icon by ABSOLUTE path, because they were
-# written to be served from the apex root. Here the apex is mounted at /anecdote.channel/,
-# so those two names are rewritten to it. Nothing else is; a name that is not here 404s.
-/assets/*   /anecdote.channel/assets/:splat   200
-/icon.svg   /anecdote.channel/icon.svg        200

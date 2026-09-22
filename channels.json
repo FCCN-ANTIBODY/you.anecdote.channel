@@ -1,5 +1,0 @@
-{
-  "version": 1,
-  "root": "the index of every channel this control point is willing to answer for. Empty is a true answer.",
-  "channels": []
-}

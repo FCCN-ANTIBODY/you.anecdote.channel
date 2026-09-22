@@ -5,6 +5,12 @@ keeper, the you-namespace, and the RP ID ruling this address exists to satisfy.
 
 ## The rules most likely to be broken here
 
+0. **THIS ENGINE HOLDS NO INSTANCE AND DEPLOYS NOTHING.** No `NAME` of somebody's website, no
+   `wrangler.jsonc`, no `_headers`, no `bin/deploy`, no recipients, no published artifacts. All of
+   that belongs to the node that mounts this at `.you-engine` — `you.yml` at its root, the way
+   `advocate.yml` sits at a node's root for `.advocate-engine`. Every other engine on a station
+   already keeps this rule; this one broke it until 2026-09-22.
+
 1. **`url:` in `you.yml` is decide-once.** It is the RP ID. A WebAuthn credential bakes it in at
    creation and cannot be migrated; changing it means every holder enrols again. Do not change it,
    and do not mint a credential anyone is meant to keep at any other name — `probe_origin` is for

@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // publish — the control branch, as a bottle: bottles/control.{bundle,gif,json}.
 //
-//     bin/publish              bundle refs/heads/control, sign it, cut it into a GIF, verify by reading it back
+//     bin/publish              bundle refs/heads/you, sign it, cut it into a GIF, verify by reading it back
 //     bin/publish --ref <ref>  another branch
 //
 // THE IDENTITY PROPERTY, ENFORCED: after writing the GIF this reads it back with the same reader the page
@@ -24,7 +24,7 @@ import { encrypt } from "../anecdote.channel/composer/age-seal.mjs";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const args = process.argv.slice(2);
-const ref = args.includes("--ref") ? args[args.indexOf("--ref") + 1] : "refs/heads/control";
+const ref = args.includes("--ref") ? args[args.indexOf("--ref") + 1] : "refs/heads/you";
 const name = ref.replace(/^refs\/heads\//, "").replace(/\//g, "-");
 const subtle = globalThis.crypto.subtle;
 const b64 = (u) => Buffer.from(u).toString("base64"), unb64 = (s) => new Uint8Array(Buffer.from(s, "base64"));

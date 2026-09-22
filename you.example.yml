@@ -1,21 +1,16 @@
-# you.yml — where THIS instance of the keeper is served, and what that fixes.
+# you.example.yml — THE SHAPE, NOT AN INSTANCE. Copy to `you.yml` at the ROOT OF THE NODE that
+# mounts this engine, the way `.advocate-engine/advocate.example.yml` becomes `advocate.yml` there.
 #
-# The engine is `you.anecdote.channel` (NAME). An instance is a deployment of it at
-# some origin, and the origin is the one thing about an instance that cannot be
-# changed afterwards: a WebAuthn credential bakes the RP ID in at creation
-# (anecdote.channel docs/decisions.md, D12), so `url:` is a decide-once field.
-# Mirror of `.tell-engine/tell.yml`, one namespace over.
-#
-# index.html does NOT read this at runtime. The page asks `location` what it is, so
-# the site and this file cannot drift apart silently; it fetches this file only to
-# show which origin was MEANT beside the one it is actually at.
+# An engine holds no instance. These bytes are code; the node wielding them is what knows which site
+# this is. So nothing here is filled in, and `bin/host` reads the node's answer rather than a file
+# beside itself. A bare clone of this engine has no host, and says so instead of inventing one.
 
 version: 1
 id: you
 name: "you — the control point"
 
 # The control point site root. The RP ID is this host. Decide-once.
-url: "https://you.discoverywritten.com"
+url: ""                                 # REQUIRED. decide-once: this is the RP ID.
 
 # The engine's canonical address. Not served, and not important yet (operator,
 # 2026-09-21): this repository matters today for its `-engine` property, as the
@@ -32,8 +27,8 @@ engine: "https://you.anecdote.channel"
 # The branch whose HEAD is what gets bundled and published. Force-pushed on purpose:
 # it carries one commit and no history, so killing it revokes everything at once, and
 # an empty branch of any age publishes the same bytes as any other empty branch.
-control_branch: control
+branch: you                             # the wing this engine packages, addressable in isolation
 
 # A secure-context origin for PROBING only — does `prf` answer on this phone? Never
 # mint a credential here that anyone is meant to keep: it binds to the wrong RP ID.
-probe_origin: "https://station.opaleye-beaufort.ts.net"
+probe_origin: ""                        # optional: somewhere to test `prf` without minting a real credential
