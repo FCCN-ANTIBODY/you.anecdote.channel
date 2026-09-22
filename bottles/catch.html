@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="en">
+<!-- bottles/catch.html — THE KEEPER'S CAMERA. The other half of greet.
+     A person who has just derived their identity shows a still (their age1… recipient as one QR).
+     This page reads it off the camera with the apex's own decoder, keeps a list on this phone, and
+     hands the list on two ways: as the exact lines recipients.txt wants, or as ONE still the station's
+     camera can read later. Nothing here provisions anything -- the line is still written by a person,
+     at the station. This just means the walk back does not lose the string. -->
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="/icon.svg">
+<title>you — catch</title>
+<style>
+  :root { color-scheme: light dark; }
+  body { margin: 0; padding: 1rem 1rem 3rem; font: 16px/1.5 system-ui, sans-serif; max-width: 42rem; margin-inline: auto; }
+  h1 { font-size: 1.4rem; margin: .2rem 0 .4rem; } .muted { opacity: .7; } .ok { color: #1a7f37; } .bad { color: #b42318; }
+  video { width: 100%; max-height: 55vh; background: #000; border-radius: .6rem; display: block; }
+  button { font: inherit; padding: .55rem 1rem; margin: .3rem .3rem .3rem 0; border-radius: .5rem; cursor: pointer; }
+  input { font: inherit; padding: .4rem .5rem; width: 100%; box-sizing: border-box; }
+  li { margin: .5rem 0; } code { font-family: ui-monospace, Menlo, monospace; word-break: break-all; font-size: .9em; }
+  .row { display: flex; gap: .5rem; align-items: center; } .row input { flex: 1; }
+  canvas.still { image-rendering: pixelated; max-width: 100%; margin-top: .6rem; }
+</style>
+<body>
+<h1>catch</h1>
+<p class="muted">Point this at someone's still. The string is public; the line is written later, by you, at the station.</p>
+<video id="v" playsinline muted hidden></video>
+<canvas id="c" hidden></canvas>
+<p><button id="start">start the camera</button> <span id="status" class="muted"></span></p>
+<div class="row"><input id="manual" placeholder="or paste an age1… recipient"><button id="add">add</button></div>
+
+<h2>caught</h2>
+<ol id="list"></ol>
+<p><button id="copy">copy as recipients.txt lines</button> <button id="show">show as one still for the station</button> <button id="clear" class="muted">forget all</button></p>
+<canvas id="out" class="still" hidden></canvas>
+
+<script type="module">
+import { decodeImage } from "../anecdote.channel/composer/qr-decode.mjs";
+import { encodeQR } from "../anecdote.channel/composer/qr-encode.mjs";
+const $ = (id) => document.getElementById(id);
+const KEY = "you.caught";
+let caught = JSON.parse(localStorage.getItem(KEY) || "[]");   // [{recipient, moniker, at}]
+const save = () => localStorage.setItem(KEY, JSON.stringify(caught));
+const RE = /^age1[02-9ac-hj-np-z]{20,}$/;
+
+function render() {
+  const ol = $("list"); ol.innerHTML = "";
+  if (!caught.length) ol.innerHTML = '<li class="muted">nobody yet.</li>';
+  caught.forEach((c, i) => {
+    const li = document.createElement("li");
+    li.innerHTML = `<div class="row"><input placeholder="moniker" value="${c.moniker || ""}" data-i="${i}"><button data-x="${i}">×</button></div><code>${c.recipient}</code> <span class="muted">${new Date(c.at).toLocaleTimeString()}</span>`;
+    ol.appendChild(li);
+  });
+}
+$("list").addEventListener("input", (e) => { const i = e.target.dataset.i; if (i != null) { caught[i].moniker = e.target.value.trim(); save(); } });
+$("list").addEventListener("click", (e) => { const i = e.target.dataset.x; if (i != null) { caught.splice(+i, 1); save(); render(); } });
+function add(recipient) {
+  if (!RE.test(recipient)) { $("status").innerHTML = `<span class="bad">not an age recipient</span>`; return false; }
+  if (caught.some((c) => c.recipient === recipient)) { $("status").innerHTML = `<span class="muted">already caught</span>`; return true; }
+  caught.push({ recipient, moniker: "", at: Date.now() }); save(); render();
+  $("status").innerHTML = `<span class="ok">caught ${recipient.slice(0, 14)}…</span>`;
+  if (navigator.vibrate) navigator.vibrate(60);
+  return true;
+}
+$("add").onclick = () => { add($("manual").value.trim()); $("manual").value = ""; };
+
+// ---- camera ----
+let stream = null, last = 0;
+$("start").onclick = async () => {
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: "environment" }, width: { ideal: 1280 } }, audio: false });
+    const v = $("v"); v.srcObject = stream; v.hidden = false; await v.play();
+    $("start").textContent = "stop"; $("start").onclick = stop; $("status").textContent = "looking…";
+    requestAnimationFrame(tick);
+  } catch (e) { $("status").innerHTML = `<span class="bad">${e.message}</span>`; }
+};
+function stop() { if (stream) stream.getTracks().forEach((t) => t.stop()); stream = null; $("v").hidden = true; $("start").textContent = "start the camera"; $("start").onclick = arguments.callee?.start; location.reload(); }
+function tick(t) {
+  if (!stream) return;
+  if (t - last > 220) {
+    last = t;
+    const v = $("v"), c = $("c"); const w = Math.min(640, v.videoWidth || 640), h = Math.round((v.videoHeight || 480) * (w / (v.videoWidth || 640)));
+    if (w && h) {
+      c.width = w; c.height = h; const g = c.getContext("2d", { willReadFrequently: true }); g.drawImage(v, 0, 0, w, h);
+      try { const r = decodeImage(g.getImageData(0, 0, w, h)); if (r && r.text) add(r.text.trim()); } catch {}
+    }
+  }
+  requestAnimationFrame(tick);
+}
+
+// ---- hand it on ----
+const lines = () => caught.map((c) => `${(c.moniker || "moniker").replace(/\s+/g, "-")}  ${c.recipient}`).join("\n");
+$("copy").onclick = async () => { await navigator.clipboard.writeText(lines() + "\n"); $("status").innerHTML = `<span class="ok">copied ${caught.length} line(s)</span>`; };
+$("show").onclick = () => {
+  const q = encodeQR(lines(), { ecLevel: "M" }), m = 4, quiet = 4, px = (q.size + 2 * quiet) * m, o = $("out");
+  o.width = o.height = px; o.hidden = false; const g = o.getContext("2d"); g.fillStyle = "#fff"; g.fillRect(0, 0, px, px); g.fillStyle = "#000";
+  for (let y = 0; y < q.size; y++) for (let x = 0; x < q.size; x++) if (q.modules[y][x]) g.fillRect((x + quiet) * m, (y + quiet) * m, m, m);
+  $("status").innerHTML = `<span class="ok">one still, ${caught.length} recipient(s) — show it to the station's camera</span>`;
+};
+$("clear").onclick = () => { if (confirm("forget every caught recipient on this phone?")) { caught = []; save(); render(); } };
+render();
+</script>
+</body>
+</html>

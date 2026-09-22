@@ -3,6 +3,7 @@
 #
 #     bin/deploy            deploy HEAD's working tree. Refuses a dirty tree.
 #     bin/deploy --dirty    deploy anyway, and say so in the deployment message.
+#     bin/deploy --production   from a non-main branch: publish at the domain, not as a preview.
 #
 # REFUSES A FAT MOUNT. mounts.txt says which directories of each submodule are
 # the site; if the checkout is wider than that, this stops before uploading.
@@ -24,7 +25,7 @@ cd "${0:A:h:h}"
 
 W=(npx -y wrangler@4)
 
-if [[ -n "$(git status --porcelain)" && "${1:-}" != "--dirty" ]]; then
+if [[ -n "$(git status --porcelain)" && "${*}" != *--dirty* ]]; then
   print -u2 "deploy: working tree is dirty. Commit, or --dirty to say so in the deployment."
   git status --short >&2
   exit 1
@@ -37,10 +38,27 @@ $W whoami >/dev/null 2>&1 || { print -u2 "deploy: not logged in to Cloudflare (n
 
 sha=$(git rev-parse --short HEAD)
 msg="$sha"
-[[ "${1:-}" == "--dirty" ]] && msg="$sha (dirty tree)"
+[[ "${*}" == *--dirty* ]] && msg="$sha (dirty tree)"
 url=$(sed -nE 's/^url:[[:space:]]*"?([^"]+)"?/\1/p' you.yml | head -1)
 
-$W pages deploy . --commit-dirty=true --commit-message "$msg"
+# A PREVIEW IS NOT A DEPLOY. wrangler names the deployment after the git branch, and anything that
+# is not the project's production branch becomes a PREVIEW at <hash>.<project>.pages.dev -- the
+# custom domain never changes. Measured 2026-09-22: eight files "uploaded", the domain 404'd on every
+# one of them, and the check below blamed the edge cache. So: on a non-main branch this is a preview
+# unless --production is given, and the check runs against whatever was actually deployed.
+branch=$(git rev-parse --abbrev-ref HEAD)
+target=$url
+if [[ "$branch" != "main" && "${*}" != *--production* ]]; then
+  print "  on branch $branch: this will be a PREVIEW. Pass --production to publish it at $url."
+  out=$($W pages deploy . --commit-dirty=true --commit-message "$msg" 2>&1 | tee /dev/stderr)
+  target=$(print -r -- "$out" | grep -o -E 'https://[a-z0-9-]+\.[a-z0-9-]+\.pages\.dev' | head -1)
+  [[ -n "$target" ]] || { print -u2 "deploy: could not find the preview URL in wrangler's output"; exit 1; }
+  print "  preview: $target"
+else
+  [[ "$branch" != "main" ]] && print "  on branch $branch, --production: publishing this tree at $url (main is now behind production)."
+  $W pages deploy . --branch main --commit-dirty=true --commit-message "$msg"
+fi
+url=$target
 
 # VERIFY THE WAY A BROWSER LOADS IT. A module import is a CORS request carrying an Origin header,
 # and Cloudflare caches that variant separately from the one curl gets; measured 2026-09-21, a
