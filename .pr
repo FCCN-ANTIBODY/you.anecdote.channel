@@ -34,4 +34,4 @@ file.
 - [ ] station-node rolls `.you-engine` — it becomes `claimed` (has a residency.yml) instead of `quiet`
 - [x] greet completes at an event with nothing else: show the still, the keeper catches it, the walk home does not lose the string
 - [ ] the workflow labels get their mapping (bind-key, open-sealed, read → what each permits)
-- [ ] a second wizard exists, proving the namespace holds
+- [x] a second wizard exists, from a different engine — `stagecraft + render` (DiscoveryWritten/stagecraft), proving the namespace holds
