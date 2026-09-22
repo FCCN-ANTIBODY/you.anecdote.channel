@@ -1,15 +1,15 @@
 {
   "schema": "you.bottle/v1",
   "ref": "refs/heads/control",
-  "tip": "b03868628a088505d53b89b86aa47809d52bf9e7",
+  "tip": "0ca39a21dddbb5fa4f9d2d4fced82604862cc00c",
   "kind": "git-bundle",
   "bundle": {
     "file": "control.bundle",
-    "bytes": 2904,
-    "sha256": "sha256:ea21c2ed548bb3ce55ea124832b84a50626883a249e330d1e7bf5d54b6d1f116",
+    "bytes": 2935,
+    "sha256": "sha256:ca6e45456ef9439e103ca159f35a8b620666a0f4036cf9beed3300284f525b56",
     "refs": [
       {
-        "oid": "b03868628a088505d53b89b86aa47809d52bf9e7",
+        "oid": "0ca39a21dddbb5fa4f9d2d4fced82604862cc00c",
         "ref": "refs/heads/control"
       }
     ],
@@ -17,7 +17,7 @@
   },
   "gif": {
     "file": "control.gif",
-    "bytes": 14735,
+    "bytes": 14748,
     "frames": 17,
     "version": 14,
     "size": 73,
@@ -25,8 +25,8 @@
     "blockSize": 256
   },
   "transfer": {
-    "id": "sha256:484e5f4842d2271712c9a1c7a06b8f88449490fc8cccaf87343c39a7e63f0d71",
+    "id": "sha256:7ce2d65f4f3836f0ccfcccd7e63039302325e1f5b490807b3864597851538b17",
     "by": "key:sha256:b73106c4192e8c30531a78eef78963e1cd5cfd518361726c9f00062bb50ca082"
   },
-  "created": "2026-09-22T01:07:09.232Z"
+  "created": "2026-09-22T01:12:27.998Z"
 }

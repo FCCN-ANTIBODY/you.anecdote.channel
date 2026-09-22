@@ -24,7 +24,7 @@ Its public half is:
 
 <p class="recipient"><code>{{ you.recipient }}</code></p>
 
-{% if you.enrolled_here %}That line is already in the arrangement, so you are a recipient here.{% else %}To become a recipient, this string reaches the keeper once — shown as the still in the corner of the key card, or copied — and a person writes it into the arrangement. There is no form for it, on purpose.{% endif %}
+{% if you.enrolled_here %}That line is already in the arrangement, so you are a recipient here.{% else %}To become a recipient, **show the still below to the keeper.** She reads it with her camera and writes the line herself when she is back at the station — there is no form for it, on purpose. Not face to face? The string is public; copy it and send it any way you like.{% endif %}
 {% elsif you.credId %}
 ## 1 · Your key — make the gesture
 
