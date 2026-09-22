@@ -6,35 +6,52 @@
 # rather than the place. Kept as a branch so it is addressable in isolation; the verb keeps its
 # name because what it does is still control the payload.
 #
-#     bin/control init [wizard]   (re)make refs/heads/you: an orphan commit of wizards/<wizard>/ + channels.json (default greet)
-#     bin/control show     what it holds now
+#     bin/control init [wizard]   (re)make refs/heads/you: an orphan commit of wizards/<wizard>/ (default greet)
+#     bin/control revoke          replace it with an empty tree: every reader's grant dies at once
+#     bin/control show            what it holds now
 #
 # Built with plumbing so the working tree is never touched: the payload is a tree written straight
 # into the object store and a parentless commit pointing at it. Re-running init replaces the branch
 # outright, which is the design (README: "Revocation is an empty branch") -- there is nothing on it
 # worth keeping between publishes, because what was published is what the recipients hold.
+#
+# REVOCATION IS AN EMPTY BRANCH, and it is a verb here rather than a manoeuvre somebody remembers.
+# `revoke` writes a commit with no files, and the next `bin/publish` bottles that -- so the bytes
+# published stop carrying anything, for everyone, in one act. The branch is force-published by
+# design: this is the one wing whose whole point is that its history does not accumulate.
 emulate -L zsh; set -euo pipefail; cd "${0:A:h:h}"
 ref=refs/heads/you
 case "${1:-}" in
   init)
     wiz=${2:-greet}; src=wizards/$wiz; [[ -d $src ]] || { print -u2 "control: no wizard at $src"; exit 1; }
     now=$(date -u +%Y-%m-%dT%H:%M:%SZ)
-    # control/ is the SOURCE of the payload, committed on main; the branch is its contents at the
-    # root plus channels.json, written through a temporary index so nested paths (_data/) work and
-    # the working tree is never touched.
+    # wizards/<wizard>/ is the SOURCE of the payload, committed on main; the branch is its contents
+    # at the root, written through a temporary index so nested paths (_data/) work and the working
+    # tree is never touched.
+    #
+    # `channels.json` USED TO BE PACKED IN HERE AND IS NOT. It is the node's answer -- which
+    # channels this deployment will speak for -- and it is a page the site fetches, not a thing a
+    # reader needs: someone holding this bundle in a room with no network has no use for an index
+    # of channels. The node composes it into the wing root. This branch is the wizard.
     idx=$(mktemp); rm -f "$idx"
     for f in $(cd "$src" && find . -type f | sed 's|^\./||' | sort); do
       GIT_INDEX_FILE=$idx git update-index --add --cacheinfo "100644,$(git hash-object -w "$src/$f"),$f"
     done
-    GIT_INDEX_FILE=$idx git update-index --add --cacheinfo "100644,$(git hash-object -w channels.json),channels.json"
     tree=$(GIT_INDEX_FILE=$idx git write-tree); rm -f "$idx"
     commit=$(git commit-tree "$tree" -m "control: $wiz $now")
     git update-ref "$ref" "$commit"
     print "  $ref -> ${commit[1,7]}  (orphan, $(git ls-tree -r --name-only "$ref" | wc -l | tr -d ' ') files)"
     ;;
+  revoke)
+    empty=$(git mktree </dev/null)
+    commit=$(git commit-tree "$empty" -m "control: revoked $(date -u +%Y-%m-%dT%H:%M:%SZ)")
+    git update-ref "$ref" "$commit"
+    print "  $ref -> ${commit[1,7]}  (empty tree — every grant this branch carried is gone)"
+    print "  Publish to make it so: bin/publish"
+    ;;
   show|"")
     git rev-parse -q --verify "$ref" >/dev/null || { print "  no control branch. bin/control init"; exit 1; }
     git log -1 --format='  %h  %s' "$ref"; git ls-tree -l "$ref" | awk '{printf "    %-14s %s bytes\n", $5, $4}'
     ;;
-  *) print -u2 "usage: bin/control [init|show]"; exit 2;;
+  *) print -u2 "usage: bin/control [init|revoke|show]"; exit 2;;
 esac
