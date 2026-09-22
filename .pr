@@ -1,5 +1,26 @@
-docs: the cache setting is "defer to this file", not "bypass"
+greet: the first wizard, declared in residency and packed into the control bottle
 
-Cache Rules name three Edge TTL choices; the one this site wants is "Use cache control-header if present, bypass cache if not", which makes the committed `_headers` the cache policy. A blanket Bypass works and is worse — it discards any future ability to cache from a file in git. And strictly no rule is needed: Cloudflare does not cache HTML or JSON by default and Origin Cache Control is on by default, so the platform already respects the file; its fallback TTLs apply only when no cache headers are present.
+## What this is
 
-Corrects the "Edge TTL = Bypass" recommendation in both `_headers` and OPEN.md §2b, which was imprecise advice sitting in a merged file.
+The first wizard, named `greet`: meeting someone at the `you` subdomain. Onboarding — staff or client; bind a
+first passkey here, then open what is sealed to it. It is what the control bottle already walked
+people through; now it has a name, a declaration, and a place.
+
+- `wizards/greet/` — `NAME`, `README.md` (the onboarding; steps are sub-resources it employs),
+  `CONSTITUTION.md` (clubhouse rules, shouty), `_data/control.yml`. Moved from `control/`, which
+  was this wizard without knowing it.
+- `residency.yml` — `.you-engine` now declares one wizard under `wizards:`, referenced by **label**
+  and never by pin, with `workflow: [bind-key, open-sealed, read]` namespaced under it. `wants: []`,
+  `serves: []` — a control point publishes and guides, nothing to store or run.
+- `bin/control init [wizard]` packs `wizards/<name>/` (default `greet`) into the orphan control
+  branch, so the bottle that ships IS the wizard.
+
+## Merge qualifications
+
+- [x] the wizard has a label, an entry README, and a constitution beside it
+- [x] residency declares it by label with no version, per library#wizards/residency-declares-them
+- [x] `bin/control init` + `bin/publish` round-trip; `bin/test` green (gif, bottle, reader, sealed)
+- [x] the control branch republished and bottled from `wizards/greet/`
+- [ ] station-node rolls `.you-engine` — it becomes `claimed` (has a residency.yml) instead of `quiet`
+- [ ] the workflow labels get their mapping (bind-key, open-sealed, read → what each permits)
+- [ ] a second wizard exists, proving the namespace holds

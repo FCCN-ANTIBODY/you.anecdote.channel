@@ -1,5 +1,5 @@
 ---
-title: you
+title: greet
 ---
 {% assign you = site.data.you %}
 {% assign ctl = site.data.control %}

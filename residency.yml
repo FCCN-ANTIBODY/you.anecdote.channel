@@ -1,0 +1,26 @@
+# residency.yml — what this engine asks of a host that mounts it. The resident's NAME is not
+# declared here: it comes from the mount path, so `.you-engine` is the claim.
+version: 1
+resident: you
+
+# Nothing to store, nothing to run. This engine is a control point: it publishes and it guides.
+wants: []
+serves: []
+
+# WIZARDS ARE A DECLARATION INSIDE RESIDENCY (library.anecdote.channel, ruled 2026-09-21): another
+# reason to want residency, not another relationship. A wizard is referenced by LABEL, never by
+# pin — the host resolves `<engine> + <label>` to whatever head this engine has, so nothing that
+# asks for one carries a version. A grant targets that same pair; once inside, workflow labels are
+# namespaced by the wizard, so two wizards may reuse a word.
+#
+# THIS ENGINE ONLY ONBOARDS. A project's own wizard comes from the engine that owns the capability --
+# a project on stagecraft is handed a wizard declared in .stagecraft-engine's residency, and the
+# grant targets THAT engine plus THAT label. So `wizards:` is a general residency block, and the
+# second wizard anyone meets will come from a different engine than the first.
+wizards:
+  - label: greet
+    for: "onboarding at the you subdomain — staff or a client: bind a first passkey here, then open what is sealed to it"
+    entry: wizards/greet/README.md        # the onboarding; steps are sub-resources it employs
+    shape: onboarding                      # owner-bind / sub-key / client are GRANT shapes, decided by the grant, not here
+    workflow: [bind-key, open-sealed, read]
+    constitution: wizards/greet/CONSTITUTION.md
