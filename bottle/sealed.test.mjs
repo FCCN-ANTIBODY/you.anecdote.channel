@@ -1,8 +1,6 @@
 // node bottle/sealed.test.mjs — the sealed round trip: an identity from 32 bytes (the prf path, minus the
 // authenticator), the bundle sealed to its recipient as a real age file, bottled, read back, opened.
-import { readFileSync } from "node:fs";
-import { existsSync } from "node:fs";
-if (!existsSync("bottles/control.bundle")) { console.log("SKIP sealed.test.mjs — no published artifact here; an engine holds no instance (bin/host)"); process.exit(0); }
+import { makeBundle } from "./fixture.mjs";
 import { generateIdentity } from "../anecdote.channel/composer/sign.mjs";
 import { encodeIdentity, recipientOf, mintAgeIdentity } from "../anecdote.channel/composer/age-mint.mjs";
 import { encrypt, decrypt } from "../anecdote.channel/composer/age-seal.mjs";
@@ -17,7 +15,7 @@ const derivedRecipient = await recipientOf(derived);
 ok(/^AGE-SECRET-KEY-1/.test(derived) && /^age1/.test(derivedRecipient), "32 bytes -> " + derivedRecipient.slice(0, 16) + "…");
 
 // 2. seal the published bundle to two recipients (one derived, one minted), bottle it, read it back, open it
-const bundle = new Uint8Array(readFileSync("bottles/control.bundle"));
+const bundle = makeBundle().bytes;   // built here, not a published artifact
 const other = await mintAgeIdentity();
 const sealed = await encrypt([derivedRecipient, other.recipient], bundle);
 ok(sealed.length > bundle.length && new TextDecoder().decode(sealed.subarray(0, 21)) === "age-encryption.org/v1", `an age v1 file of ${sealed.length} bytes, two stanzas`);
