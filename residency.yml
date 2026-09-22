@@ -31,6 +31,30 @@ wants:
 # Nothing to run. A control point publishes and guides; it is not a service.
 serves: []
 
+# ------------------------------------------------------------------- publishes --
+# A WING THIS ENGINE WOULD LIKE SERVED. Declared the way everything else here is declared: the
+# engine says what it has and what it wants done with it, and the node decides. Any engine with a
+# wing may carry one of these — who would we be to stop stagecraft publishing its own — so this is
+# a general residency block and `you` is simply the first to use it.
+#
+# The engine names no domain. `origin` is what the NODE answers, in its `<engine>.yml`, because the
+# domain belongs to the node's operator and not to a framework. Same discipline as `wants:`: labels
+# and intentions here, bindings there.
+publishes:
+  - wing: you
+    holds: "the control point: the pages, the wizard's onboarding, and whatever the node drops off"
+    root: branch                    # this wing is kept as a branch (`you`), addressable on its own
+    build: compose                  # engine pages + the node's answers + derived artifacts
+    verify: bin/verify              # the engine's own guarantee; a node calls it, never reimplements it
+    # A wing may hold public data blobs beside its pages. `ignore` is what must not be served even
+    # though it is in the root -- sources for a build format nobody asked the node to run.
+    ignore: ["*.test.mjs", "node_modules", ".git"]
+    # SUB-SUBDOMAINS ARE THE POINT. A path inside this wing is meant to be reachable as a label
+    # under the origin the node binds, so a project named in the wing becomes
+    # `<project>.<origin>`. Declared; no node implements the wildcard yet.
+    labels: "projects/*"
+
+
 # WIZARDS ARE A DECLARATION INSIDE RESIDENCY (library.anecdote.channel, ruled 2026-09-21): another
 # reason to want residency, not another relationship. A wizard is referenced by LABEL, never by
 # pin — the host resolves `<engine> + <label>` to whatever head this engine has, so nothing that
