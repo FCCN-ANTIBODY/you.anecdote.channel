@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// publish — the `you` branch, as a bottle: <host>/state/you/bottles/you.{bundle,gif,json}.
+// publish — the control branch, as a bottle: bottles/control.{bundle,gif,json}.
 //
 //     bin/publish              bundle refs/heads/you, sign it, cut it into a GIF, verify by reading it back
 //     bin/publish --ref <ref>  another branch
@@ -7,12 +7,6 @@
 // THE IDENTITY PROPERTY, ENFORCED: after writing the GIF this reads it back with the same reader the page
 // uses (bottle/bottle.mjs unbottle) and refuses to finish unless the bytes that come out are the bundle
 // that went in. A bottle that only encodes is a picture; this one has been decoded before anyone sees it.
-//
-// THE ARTIFACTS GO TO THE HOST, NOT HERE. A bottle is state -- derived, regenerated, belonging to
-// the deployment and not to the machinery -- so it is written where `bin/host path bottles` says,
-// under the node's `state/`. This wrote into the engine's own tree until 2026-09-22, which is the
-// same conflation `bin/host` was added to end, and `recipients.txt` was read from here too after
-// that file had already been removed. Both now come from the node that mounts these bytes.
 //
 // THE SIGNER is a device-minted Ed25519 key at ~/.local/state/you/signer.pkcs8 (atlas's format), made on
 // first use and never written into this repository. It is not the operator's passkey and does not claim to
@@ -50,15 +44,6 @@ async function signer(path) {
   return { privateKey: pair.privateKey, raw, fingerprint: await fingerprint(raw) };
 }
 
-const host = (verb) => spawnSync(join(root, "bin", "host"), verb, { encoding: "utf8" });
-const where = host(["path", "bottles"]);
-if (where.status !== 0 || !where.stdout.trim()) {
-  console.error("publish: this engine holds no instance, so there is nowhere to put what it bottles.\n"
-    + "Mount it at <node>/.you-engine and the node answers where its artifacts live. `bin/host`.");
-  process.exit(1);
-}
-const bottlesDir = where.stdout.trim();
-
 const tip = spawnSync("git", ["rev-parse", "--verify", ref], { cwd: root, encoding: "utf8" });
 if (tip.status !== 0) { console.error(`publish: no ${ref}. bin/control init`); process.exit(1); }
 const b = spawnSync("git", ["bundle", "create", "-", ref], { cwd: root, maxBuffer: 1 << 28 });
@@ -73,7 +58,7 @@ const back = await unbottle(made.gif);
 const same = back.ok && back.bytes.length === bundle.length && back.bytes.every((v, i) => v === bundle[i]);
 if (!same) { console.error("publish: the GIF did not read back as the bundle: " + back.errors.join("; ")); process.exit(1); }
 
-mkdirSync(bottlesDir, { recursive: true });
+mkdirSync(join(root, "bottles"), { recursive: true });
 const manifest = {
   schema: "you.bottle/v1", ref, tip: tip.stdout.trim(), kind: "git-bundle",
   bundle: { file: `${name}.bundle`, bytes: bundle.length, sha256: await defaultHash(bundle), refs: parsed.refs, prerequisites: parsed.prerequisites },
@@ -81,26 +66,25 @@ const manifest = {
   transfer: { id: made.id, by: id.fingerprint },
   created: new Date().toISOString(),
 };
-writeFileSync(join(bottlesDir, `${name}.bundle`), bundle);
-writeFileSync(join(bottlesDir, `${name}.gif`), made.gif);
-writeFileSync(join(bottlesDir, `${name}.json`), JSON.stringify(manifest, null, 2) + "\n");
-console.log(`  into ${bottlesDir}`);
-console.log(`  ${ref} @ ${manifest.tip.slice(0, 7)}  ->  ${name}.bundle (${bundle.length} B)`);
-console.log(`  bottled as ${made.frames} frames of v${made.version} (${made.size}px, ${made.ecLevel})  ->  ${name}.gif (${made.gif.length} B)`);
+writeFileSync(join(root, "bottles", `${name}.bundle`), bundle);
+writeFileSync(join(root, "bottles", `${name}.gif`), made.gif);
+writeFileSync(join(root, "bottles", `${name}.json`), JSON.stringify(manifest, null, 2) + "\n");
+console.log(`  ${ref} @ ${manifest.tip.slice(0, 7)}  ->  bottles/${name}.bundle (${bundle.length} B)`);
+console.log(`  bottled as ${made.frames} frames of v${made.version} (${made.size}px, ${made.ecLevel})  ->  bottles/${name}.gif (${made.gif.length} B)`);
 console.log(`  read back with the camera off: the bytes are the bytes. signed by ${id.fingerprint.slice(0, 27)}…`);
 
-// THE SEALED BOTTLE, when there is anyone to seal to. the node's `recipients:` is the arrangement: one age
+// THE SEALED BOTTLE, when there is anyone to seal to. recipients.txt is the arrangement: one age
 // recipient per line, each the public half of an identity a passkey derives (bottle/you-key.mjs).
 // The bundle is sealed ONCE as an age v1 file with one stanza per recipient, then bottled exactly like
-// the clear one -- encrypt, then cut. Removing a line from the NODE and re-running is revocation.
+// the clear one -- encrypt, then cut. Removing a line and re-running is revocation.
 const recipients = [];
-for (const line of (host(["recipients"]).stdout || "").split("\n")) {
+for (const line of readFileSync(join(root, "recipients.txt"), "utf8").split("\n")) {
   const t = line.replace(/#.*/, "").trim(); if (!t) continue;
   const [moniker, recipient] = t.split(/\s+/);
-  if (!/^age1[0-9a-z]+$/.test(recipient || "")) { console.error(`publish: the node's arrangement holds a line that is not an age recipient: ${line}`); process.exit(1); }
+  if (!/^age1[0-9a-z]+$/.test(recipient || "")) { console.error(`publish: recipients.txt: not an age recipient: ${line}`); process.exit(1); }
   recipients.push({ moniker, recipient });
 }
-if (!recipients.length) { console.log("  sealed: the node's arrangement names nobody yet, so no sealed bottle. That is a true answer."); }
+if (!recipients.length) { console.log("  sealed: no recipients in recipients.txt yet, so no sealed bottle."); }
 else {
   const sealedBytes = await encrypt(recipients.map((r) => r.recipient), bundle);
   const sealedMade = await bottle(sealedBytes, id, { kind: "age" });
@@ -112,8 +96,8 @@ else {
                transfer: { id: sealedMade.id, by: id.fingerprint } };
   delete sm.bundle.file;
   sm.age = { file: `${name}.age`, bytes: sealedBytes.length };
-  writeFileSync(join(bottlesDir, `${name}.age`), sealedBytes);
-  writeFileSync(join(bottlesDir, `${name}.sealed.gif`), sealedMade.gif);
-  writeFileSync(join(bottlesDir, `${name}.sealed.json`), JSON.stringify(sm, null, 2) + "\n");
-  console.log(`  sealed to ${recipients.length} recipient(s) (${recipients.map((r) => r.moniker).join(", ")}): ${sealedBytes.length} B age file  ->  ${name}.sealed.gif (${sealedMade.gif.length} B, ${sealedMade.frames} frames), read back.`);
+  writeFileSync(join(root, "bottles", `${name}.age`), sealedBytes);
+  writeFileSync(join(root, "bottles", `${name}.sealed.gif`), sealedMade.gif);
+  writeFileSync(join(root, "bottles", `${name}.sealed.json`), JSON.stringify(sm, null, 2) + "\n");
+  console.log(`  sealed to ${recipients.length} recipient(s) (${recipients.map((r) => r.moniker).join(", ")}): ${sealedBytes.length} B age file  ->  bottles/${name}.sealed.gif (${sealedMade.gif.length} B, ${sealedMade.frames} frames), read back.`);
 }

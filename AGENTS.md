@@ -23,11 +23,9 @@ keeper, the you-namespace, and the RP ID ruling this address exists to satisfy.
    the previous HEAD is meant to be gone.
 5. **Revocation is an empty branch.** Do not invent an expiry field, a token, or a deny-list. Removing
    the bytes is the mechanism, and an empty QR of any age is indistinguishable from any other.
-6. **No build, and no instance.** The repository is machinery, not a site. It generates nothing at
-   deploy — but what `bin/publish` writes is no longer committed *here*, because it is not ours:
-   `channels.json` is the node's answer and the bottles are the node's state, both of them under the
-   host's `state/`, found through `bin/host`. This file said "committed (`channels.json`, everything
-   in `bottles/`)" until 2026-09-22, which was true when this repository was somebody's website.
+6. **No build.** The repository is the site. If a file must be generated, it is generated *and
+   committed* (`channels.json`, everything in `bottles/`), never produced at deploy. `bin/publish` is
+   run by a person, and what it wrote is what gets committed.
 7. **The apex is mounted sparse, and `mounts.txt` is the record.** `git-enough/` and `composer/` are
    1.7 MB of a 50 MB repository. `bin/mount` applies the checkout; `bin/deploy` refuses one that is
    wider. Widening it is a line in `mounts.txt`, argued, not a `git submodule update` that happened.
