@@ -65,10 +65,10 @@ if (b.status !== 0) { console.error("publish: git bundle failed:\n" + b.stderr);
 const bundle = new Uint8Array(b.stdout);
 const parsed = parseBundle(bundle);
 
-const signerAt = process.env.YOU_SIGNER || host(["path", "signer"]).stdout.trim();
+const signerAt = host(["path", "signer"]).stdout.trim();
 if (!signerAt) {
   console.error("publish: the node does not say where its signer lives (`bin/host path signer`).\n"
-    + "Minting one anywhere else would publish from a stranger. Set YOU_SIGNER or give the node a `signer` place.");
+    + "Minting one anywhere else would publish from a stranger. Give the node a `signer` place.");
   process.exit(1);
 }
 const id = await signer(signerAt);
