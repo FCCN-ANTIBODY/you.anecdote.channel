@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// publish — the `you` branch, as a bottle: <host>/state/you/bottles/you.{bundle,gif,json}.
+// publish — the `you` branch, as a bottle: <host wings>/you/bottles/you.{bundle,gif,json}.
 //
 //     bin/publish              bundle refs/heads/you, sign it, cut it into a GIF, verify by reading it back
 //     bin/publish --ref <ref>  another branch
@@ -10,7 +10,7 @@
 //
 // THE ARTIFACTS GO TO THE HOST, NOT HERE. A bottle is state -- derived, regenerated, belonging to
 // the deployment and not to the machinery -- so it is written where `bin/host path bottles` says,
-// under the node's `state/`. This wrote into the engine's own tree until 2026-09-22, which is the
+// where the node places its `wings`. This wrote into the engine's own tree until 2026-09-22, which is the
 // same conflation `bin/host` was added to end, and `recipients.txt` was read from here too after
 // that file had already been removed. Both now come from the node that mounts these bytes.
 //
