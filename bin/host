@@ -59,8 +59,15 @@ def instance(h=None):
     return out
 
 
+def node_place(h, label):
+    """What the node's `station.py place <label>` answers, or "" when it cannot."""
+    r = subprocess.run([os.path.join(h, "machine", "lib", "station.py"), "place", label],
+                       env=dict(os.environ, STATION_NODE=h), capture_output=True, text=True)
+    return r.stdout.strip() if r.returncode == 0 else ""
+
+
 def path_for(label, h=None):
-    """Where the host keeps a wanted label. `bottles` is written, so the node places it."""
+    """Where the host keeps a wanted label. `bottles` and `signer` are the node's places."""
     h = h or host()
     if not h:
         return None
@@ -68,10 +75,10 @@ def path_for(label, h=None):
     # the node keeps its `wings` (`station.py place wings`). A node that cannot answer gets None.
     # Everything else is the node's answer and lives in its `you.yml`.
     if label == "bottles":
-        r = subprocess.run([os.path.join(h, "machine", "lib", "station.py"), "place", "wings"],
-                           env=dict(os.environ, STATION_NODE=h), capture_output=True, text=True)
-        where = r.stdout.strip() if r.returncode == 0 else ""
+        where = node_place(h, "wings")
         return os.path.join(where, "you", "bottles") if where else None
+    if label == "signer":
+        return node_place(h, "signer") or None
     return instance_file(h)
 
 

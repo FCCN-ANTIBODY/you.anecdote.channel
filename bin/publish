@@ -14,14 +14,13 @@
 // same conflation `bin/host` was added to end, and `recipients.txt` was read from here too after
 // that file had already been removed. Both now come from the node that mounts these bytes.
 //
-// THE SIGNER is a device-minted Ed25519 key at ~/.local/state/you/signer.pkcs8 (atlas's format), made on
+// THE SIGNER is a device-minted Ed25519 key where the node places it (`bin/host path signer`), made on
 // first use and never written into this repository. It is not the operator's passkey and does not claim to
 // be: it says "this station bottled these bytes", which a reader verifies from anyone and TRUSTS locally.
 import { spawnSync } from "node:child_process";
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
-import { homedir } from "node:os";
 import { fingerprint } from "../anecdote.channel/composer/sign.mjs";
 import { defaultHash } from "../anecdote.channel/composer/anecdote.mjs";
 import { bottle, unbottle } from "../bottle/bottle.mjs";
@@ -66,7 +65,13 @@ if (b.status !== 0) { console.error("publish: git bundle failed:\n" + b.stderr);
 const bundle = new Uint8Array(b.stdout);
 const parsed = parseBundle(bundle);
 
-const id = await signer(process.env.YOU_SIGNER || join(homedir(), ".local", "state", "you", "signer.pkcs8"));
+const signerAt = process.env.YOU_SIGNER || host(["path", "signer"]).stdout.trim();
+if (!signerAt) {
+  console.error("publish: the node does not say where its signer lives (`bin/host path signer`).\n"
+    + "Minting one anywhere else would publish from a stranger. Set YOU_SIGNER or give the node a `signer` place.");
+  process.exit(1);
+}
+const id = await signer(signerAt);
 const made = await bottle(bundle, id, { kind: "git-bundle" });
 
 const back = await unbottle(made.gif);
