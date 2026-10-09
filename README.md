@@ -67,8 +67,10 @@ delay-0 GIF — the *stored* rendering `bottles.anecdote.channel` describes. The
 with the page's own reader and refuses to finish unless the bytes match. 723 bytes of bundle became a
 5.2 KB GIF of six 73-px frames on 2026-09-21.
 
-The signer is a device-minted Ed25519 key outside the repository. It says *this station bottled these
-bytes*; it is not the operator's passkey and is not the workload credential.
+The signer is a device-minted Ed25519 key outside the repository, where the node places it. It says
+*this station bottled these bytes*; it is not the operator's passkey and is not the workload credential.
+`bin/signer mint` makes it, once, on purpose. `bin/publish` only reads it and stops if it is missing:
+a fresh key minted mid-publish would be a new identity passed off as the old one.
 
 ## The sealed bottle, as built
 
