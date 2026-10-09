@@ -14,9 +14,14 @@
 // same conflation `bin/host` was added to end, and `recipients.txt` was read from here too after
 // that file had already been removed. Both now come from the node that mounts these bytes.
 //
-// THE SIGNER is a device-minted Ed25519 key where the node places it (`bin/host path signer`), made on
-// first use and never written into this repository. It is not the operator's passkey and does not claim to
-// be: it says "this station bottled these bytes", which a reader verifies from anyone and TRUSTS locally.
+// THE SIGNER is a device-minted Ed25519 key where the node places it (`bin/host path signer`), never
+// written into this repository. It is not the operator's passkey and does not claim to be: it says "this
+// station bottled these bytes", which a reader verifies from anyone and TRUSTS locally.
+//
+// A MISSING SIGNER STOPS PUBLISH. Until 2026-10-09 this minted a fresh key on first use, so a lost or
+// unmounted key file meant the next bottle went out signed by a brand-new identity and the run still
+// reported success. A reader who trusted the station's key would then see a stranger. Making a key is
+// now its own deliberate act, `bin/signer mint`, and publish only ever reads one.
 import { spawnSync } from "node:child_process";
 import { readFileSync, writeFileSync, existsSync, mkdirSync } from "node:fs";
 import { join, dirname } from "node:path";
@@ -35,18 +40,16 @@ const subtle = globalThis.crypto.subtle;
 const b64 = (u) => Buffer.from(u).toString("base64"), unb64 = (s) => new Uint8Array(Buffer.from(s, "base64"));
 
 async function signer(path) {
-  if (existsSync(path)) {
-    const privateKey = await subtle.importKey("pkcs8", unb64(readFileSync(path, "utf8").trim()), { name: "Ed25519" }, true, ["sign"]);
-    const jwk = await subtle.exportKey("jwk", privateKey);
-    const raw = unb64(jwk.x.replace(/-/g, "+").replace(/_/g, "/"));
-    return { privateKey, raw, fingerprint: await fingerprint(raw) };
+  if (!existsSync(path)) {
+    console.error(`publish: no signer at ${path}, the node's \`signer\` place.\n`
+      + "Nothing was bottled. If the key was lost, the station's identity is gone with it, and every reader that\n"
+      + "trusted it needs telling. Restore the file, or make a new identity on purpose: `bin/signer mint`.");
+    process.exit(1);
   }
-  const pair = await subtle.generateKey({ name: "Ed25519" }, true, ["sign", "verify"]);
-  mkdirSync(dirname(path), { recursive: true });
-  writeFileSync(path, b64(new Uint8Array(await subtle.exportKey("pkcs8", pair.privateKey))) + "\n", { mode: 0o600 });
-  const raw = new Uint8Array(await subtle.exportKey("raw", pair.publicKey));
-  console.log("  minted a signer at " + path);
-  return { privateKey: pair.privateKey, raw, fingerprint: await fingerprint(raw) };
+  const privateKey = await subtle.importKey("pkcs8", unb64(readFileSync(path, "utf8").trim()), { name: "Ed25519" }, true, ["sign"]);
+  const jwk = await subtle.exportKey("jwk", privateKey);
+  const raw = unb64(jwk.x.replace(/-/g, "+").replace(/_/g, "/"));
+  return { privateKey, raw, fingerprint: await fingerprint(raw) };
 }
 
 const host = (verb) => spawnSync(join(root, "bin", "host"), verb, { encoding: "utf8" });

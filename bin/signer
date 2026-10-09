@@ -1,0 +1,46 @@
+#!/usr/bin/env node
+// signer — the station's bottling identity, where the node places it (`bin/host path signer`).
+//
+//     bin/signer         where it lives and its fingerprint, or that there is none
+//     bin/signer mint    make one. Refuses if a key is already there.
+//
+// MINTING IS A DECISION, SO IT IS ITS OWN VERB. `bin/publish` used to mint on first use, which meant a
+// lost key file was silently replaced by a new identity. Now publish only reads, and stops without a key.
+// This never overwrites: replacing an identity means moving the old key away yourself, on purpose.
+import { spawnSync } from "node:child_process";
+import { readFileSync, writeFileSync, existsSync, mkdirSync } from "node:fs";
+import { join, dirname } from "node:path";
+import { fileURLToPath } from "node:url";
+import { fingerprint } from "../anecdote.channel/composer/sign.mjs";
+
+const root = join(dirname(fileURLToPath(import.meta.url)), "..");
+const subtle = globalThis.crypto.subtle;
+const b64 = (u) => Buffer.from(u).toString("base64"), unb64 = (s) => new Uint8Array(Buffer.from(s, "base64"));
+
+const at = spawnSync(join(root, "bin", "host"), ["path", "signer"], { encoding: "utf8" }).stdout.trim();
+if (!at) {
+  console.error("signer: the node does not say where its signer lives (`bin/host path signer`). Give it a `signer` place.");
+  process.exit(1);
+}
+
+const verb = process.argv[2] || "";
+if (verb === "mint") {
+  if (existsSync(at)) {
+    console.error(`signer: there is already a key at ${at}. Not replaced.\n`
+      + "A new identity means every reader that trusted the old one sees a stranger. Move the old key away first if you mean it.");
+    process.exit(1);
+  }
+  const pair = await subtle.generateKey({ name: "Ed25519" }, true, ["sign", "verify"]);
+  mkdirSync(dirname(at), { recursive: true });
+  writeFileSync(at, b64(new Uint8Array(await subtle.exportKey("pkcs8", pair.privateKey))) + "\n", { mode: 0o600, flag: "wx" });
+  const raw = new Uint8Array(await subtle.exportKey("raw", pair.publicKey));
+  console.log(`  minted ${at}\n  fingerprint ${await fingerprint(raw)}`);
+} else if (verb === "") {
+  if (!existsSync(at)) { console.log(`  no signer at ${at}. bin/signer mint`); process.exit(1); }
+  const key = await subtle.importKey("pkcs8", unb64(readFileSync(at, "utf8").trim()), { name: "Ed25519" }, true, ["sign"]);
+  const jwk = await subtle.exportKey("jwk", key);
+  console.log(`  ${at}\n  fingerprint ${await fingerprint(unb64(jwk.x.replace(/-/g, "+").replace(/_/g, "/")))}`);
+} else {
+  console.error("usage: bin/signer [mint]");
+  process.exit(2);
+}
